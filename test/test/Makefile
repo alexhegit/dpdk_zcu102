@@ -232,6 +232,10 @@ ifeq ($(CONFIG_RTE_LIBRTE_PMD_NULL),y)
 LDLIBS += -lrte_pmd_null
 endif
 
+ifeq ($(CONFIG_RTE_LIBRTE_PMD_XLNX),y)
+LDLIBS += -lrte_pmd_xlnx
+endif
+
 ifeq ($(CONFIG_RTE_LIBRTE_PMD_RING),y)
 LDLIBS += -lrte_pmd_ring
 endif

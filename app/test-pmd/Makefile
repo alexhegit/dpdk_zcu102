@@ -64,6 +64,10 @@ ifeq ($(CONFIG_RTE_LIBRTE_PMD_SOFTNIC),y)
 LDLIBS += -lrte_pmd_softnic
 endif
 
+ifeq ($(CONFIG_RTE_LIBRTE_PMD_XLNX),y)
+LDLIBS += -lrte_pmd_xlnx
+endif
+
 endif
 
 CFLAGS_cmdline.o := -D_GNU_SOURCE
