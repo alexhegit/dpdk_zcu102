@@ -82,6 +82,8 @@ eth_xlnx_rx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 	struct xlnx_queue *h = q;
 	unsigned packet_size;
 
+	xlnx_log_dbg("%s\n", __func__);
+
 	if ((q == NULL) || (bufs == NULL))
 		return 0;
 
@@ -110,6 +112,8 @@ eth_xlnx_copy_rx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 	struct xlnx_queue *h = q;
 	unsigned packet_size;
 
+	xlnx_log_dbg("%s\n", __func__);
+
 	if ((q == NULL) || (bufs == NULL))
 		return 0;
 
@@ -136,6 +140,8 @@ eth_xlnx_tx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 	int i;
 	struct xlnx_queue *h = q;
 
+	xlnx_log_dbg("%s\n", __func__);
+
 	if ((q == NULL) || (bufs == NULL))
 		return 0;
 
@@ -157,6 +163,8 @@ eth_xlnx_copy_tx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 	int i;
 	struct xlnx_queue *h = q;
 	unsigned packet_size;
+
+	xlnx_log_dbg("%s\n", __func__);
 
 	if ((q == NULL) || (bufs == NULL))
 		return 0;
