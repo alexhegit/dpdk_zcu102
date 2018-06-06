@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: BSD-3-Clause
- * Copyright(c) 2018 Xilinx
+ * Copyright(c) 2018 Xilinx, Inc
  */
 
 #include <rte_mbuf.h>
@@ -57,6 +57,23 @@ static struct rte_eth_link pmd_link = {
 	.link_status = ETH_LINK_DOWN,
 	.link_autoneg = ETH_LINK_AUTONEG,
 };
+
+int xlnx_net_logtype_init;
+int xlnx_net_logtype_driver;
+
+RTE_INIT(xlnx_net_init_log);
+static void
+xlnx_net_init_log(void)
+{
+	xlnx_net_logtype_init = rte_log_register("pmd.net.xlnx.init");
+	if (xlnx_net_logtype_init >= 0)
+		rte_log_set_level(xlnx_net_logtype_init, RTE_LOG_NOTICE);
+
+	xlnx_net_logtype_driver = rte_log_register("pmd.net.xlnx.driver");
+	if (xlnx_net_logtype_driver >= 0)
+		rte_log_set_level(xlnx_net_logtype_driver, RTE_LOG_NOTICE);
+}
+
 
 static uint16_t
 eth_xlnx_rx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
