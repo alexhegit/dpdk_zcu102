@@ -185,7 +185,7 @@ eth_xlnx_copy_tx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 static int
 eth_dev_configure(struct rte_eth_dev *dev __rte_unused)
 {
-	PMD_INIT_FUNC_TRACE();
+	xlnx_log_info();
 
 	return 0;
 }
@@ -193,7 +193,7 @@ eth_dev_configure(struct rte_eth_dev *dev __rte_unused)
 static int
 eth_dev_start(struct rte_eth_dev *dev)
 {
-	PMD_INIT_FUNC_TRACE();
+	xlnx_log_info();
 
 	if (dev == NULL)
 		return -EINVAL;
@@ -205,7 +205,7 @@ eth_dev_start(struct rte_eth_dev *dev)
 static void
 eth_dev_stop(struct rte_eth_dev *dev)
 {
-	PMD_INIT_FUNC_TRACE();
+	xlnx_log_info();
 
 	if (dev == NULL)
 		return;
@@ -224,7 +224,7 @@ eth_rx_queue_setup(struct rte_eth_dev *dev, uint16_t rx_queue_id,
 	struct pmd_internals *internals;
 	unsigned packet_size;
 
-	PMD_INIT_FUNC_TRACE();
+	xlnx_log_info();
 
 	if ((dev == NULL) || (mb_pool == NULL))
 		return -EINVAL;
@@ -260,7 +260,7 @@ eth_tx_queue_setup(struct rte_eth_dev *dev, uint16_t tx_queue_id,
 	struct pmd_internals *internals;
 	unsigned packet_size;
 
-	PMD_INIT_FUNC_TRACE();
+	xlnx_log_info();
 
 	if (dev == NULL)
 		return -EINVAL;
@@ -288,7 +288,7 @@ eth_tx_queue_setup(struct rte_eth_dev *dev, uint16_t tx_queue_id,
 static int
 eth_mtu_set(struct rte_eth_dev *dev __rte_unused, uint16_t mtu __rte_unused)
 {
-	PMD_INIT_FUNC_TRACE();
+	xlnx_log_info();
 
 	return 0;
 }
@@ -299,7 +299,7 @@ eth_dev_info(struct rte_eth_dev *dev,
 {
 	struct pmd_internals *internals;
 
-	PMD_INIT_FUNC_TRACE();
+	xlnx_log_info();
 
 	if ((dev == NULL) || (dev_info == NULL))
 		return;
@@ -319,7 +319,7 @@ eth_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *igb_stats)
 	unsigned long rx_total = 0, tx_total = 0, tx_err_total = 0;
 	const struct pmd_internals *internal;
 
-	PMD_INIT_FUNC_TRACE();
+	xlnx_log_info();
 
 	if ((dev == NULL) || (igb_stats == NULL))
 		return -EINVAL;
@@ -359,7 +359,7 @@ eth_stats_reset(struct rte_eth_dev *dev)
 	unsigned i;
 	struct pmd_internals *internal;
 
-	PMD_INIT_FUNC_TRACE();
+	xlnx_log_info();
 
 	if (dev == NULL)
 		return;
@@ -378,7 +378,7 @@ eth_queue_release(void *q)
 {
 	struct xlnx_queue *nq;
 
-	PMD_INIT_FUNC_TRACE();
+	xlnx_log_info();
 
 	if (q == NULL)
 		return;
@@ -391,7 +391,7 @@ static int
 eth_link_update(struct rte_eth_dev *dev __rte_unused,
 		int wait_to_complete __rte_unused)
 {
-	PMD_INIT_FUNC_TRACE();
+	xlnx_log_info();
 
 	return 0;
 }
@@ -401,7 +401,7 @@ static void
 eth_mac_address_set(__rte_unused struct rte_eth_dev *dev,
 		    __rte_unused struct ether_addr *addr)
 {
-	PMD_INIT_FUNC_TRACE();
+	xlnx_log_info();
 
 	return;
 }

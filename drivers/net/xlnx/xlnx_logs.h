@@ -16,6 +16,7 @@
 			"%s(): " fmt "\n", __func__, ## args)
 
 #define xlnx_log_err(s, ...) PMD_INIT_LOG(ERR, s, ##__VA_ARGS__)
+#define xlnx_log_info(s, ...) PMD_INIT_LOG(INFO, s, ##__VA_ARGS__)
 #define xlnx_log_dbg(s, ...) PMD_DRV_LOG(DEBUG, s, ##__VA_ARGS__)
 
 extern int xlnx_net_logtype_init;
