@@ -15,14 +15,11 @@
 #define XLNX_MAX_QUEUE_PER_PORT	1
 
 #define ETH_NULL_PACKET_SIZE_ARG	"size"
-#define ETH_NULL_PACKET_COPY_ARG	"copy"
 
 static unsigned default_packet_size = 64;
-static unsigned default_packet_copy;
 
 static const char *valid_arguments[] = {
 	ETH_NULL_PACKET_SIZE_ARG,
-	ETH_NULL_PACKET_COPY_ARG,
 	NULL
 };
 
@@ -32,7 +29,6 @@ struct xlnx_queue {
 	struct pmd_internals *internals;
 
 	struct rte_mempool *mb_pool;
-	struct rte_mbuf *dummy_packet;
 
 	rte_atomic64_t rx_pkts;
 	rte_atomic64_t tx_pkts;
@@ -41,7 +37,6 @@ struct xlnx_queue {
 
 struct pmd_internals {
 	unsigned packet_size;
-	unsigned packet_copy;
 	uint16_t port_id;
 
 	struct xlnx_queue rx_xlnx_queues[XLNX_MAX_QUEUE_PER_PORT];
@@ -107,35 +102,6 @@ eth_xlnx_rx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 }
 
 static uint16_t
-eth_xlnx_copy_rx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
-{
-	int i;
-	struct xlnx_queue *h = q;
-	unsigned packet_size;
-
-	xlnx_log_dbg("%s\n", __func__);
-
-	if ((q == NULL) || (bufs == NULL))
-		return 0;
-
-	packet_size = h->internals->packet_size;
-	for (i = 0; i < nb_bufs; i++) {
-		bufs[i] = rte_pktmbuf_alloc(h->mb_pool);
-		if (!bufs[i])
-			break;
-		rte_memcpy(rte_pktmbuf_mtod(bufs[i], void *), h->dummy_packet,
-					packet_size);
-		bufs[i]->data_len = (uint16_t)packet_size;
-		bufs[i]->pkt_len = packet_size;
-		bufs[i]->port = h->internals->port_id;
-	}
-
-	rte_atomic64_add(&(h->rx_pkts), i);
-
-	return i;
-}
-
-static uint16_t
 eth_xlnx_tx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 {
 	int i;
@@ -152,30 +118,6 @@ eth_xlnx_tx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 
 	for (i = 0; i < nb_bufs; i++)
 		rte_pktmbuf_free(bufs[i]);
-
-	rte_atomic64_add(&(h->tx_pkts), i);
-
-	return i;
-}
-
-static uint16_t
-eth_xlnx_copy_tx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
-{
-	int i;
-	struct xlnx_queue *h = q;
-	unsigned packet_size;
-
-	xlnx_log_dbg("%s\n", __func__);
-
-	if ((q == NULL) || (bufs == NULL))
-		return 0;
-
-	packet_size = h->internals->packet_size;
-	for (i = 0; i < nb_bufs; i++) {
-		rte_memcpy(h->dummy_packet, rte_pktmbuf_mtod(bufs[i], void *),
-					packet_size);
-		rte_pktmbuf_free(bufs[i]);
-	}
 
 	rte_atomic64_add(&(h->tx_pkts), i);
 
@@ -220,9 +162,7 @@ eth_rx_queue_setup(struct rte_eth_dev *dev, uint16_t rx_queue_id,
 		const struct rte_eth_rxconf *rx_conf __rte_unused,
 		struct rte_mempool *mb_pool)
 {
-	struct rte_mbuf *dummy_packet;
 	struct pmd_internals *internals;
-	unsigned packet_size;
 
 	xlnx_log_info();
 
@@ -234,18 +174,11 @@ eth_rx_queue_setup(struct rte_eth_dev *dev, uint16_t rx_queue_id,
 	if (rx_queue_id >= dev->data->nb_rx_queues)
 		return -ENODEV;
 
-	packet_size = internals->packet_size;
-
 	internals->rx_xlnx_queues[rx_queue_id].mb_pool = mb_pool;
 	dev->data->rx_queues[rx_queue_id] =
 		&internals->rx_xlnx_queues[rx_queue_id];
-	dummy_packet = rte_zmalloc_socket(NULL,
-			packet_size, 0, dev->data->numa_node);
-	if (dummy_packet == NULL)
-		return -ENOMEM;
 
 	internals->rx_xlnx_queues[rx_queue_id].internals = internals;
-	internals->rx_xlnx_queues[rx_queue_id].dummy_packet = dummy_packet;
 
 	return 0;
 }
@@ -256,9 +189,7 @@ eth_tx_queue_setup(struct rte_eth_dev *dev, uint16_t tx_queue_id,
 		unsigned int socket_id __rte_unused,
 		const struct rte_eth_txconf *tx_conf __rte_unused)
 {
-	struct rte_mbuf *dummy_packet;
 	struct pmd_internals *internals;
-	unsigned packet_size;
 
 	xlnx_log_info();
 
@@ -270,17 +201,10 @@ eth_tx_queue_setup(struct rte_eth_dev *dev, uint16_t tx_queue_id,
 	if (tx_queue_id >= dev->data->nb_tx_queues)
 		return -ENODEV;
 
-	packet_size = internals->packet_size;
-
 	dev->data->tx_queues[tx_queue_id] =
 		&internals->tx_xlnx_queues[tx_queue_id];
-	dummy_packet = rte_zmalloc_socket(NULL,
-			packet_size, 0, dev->data->numa_node);
-	if (dummy_packet == NULL)
-		return -ENOMEM;
 
 	internals->tx_xlnx_queues[tx_queue_id].internals = internals;
-	internals->tx_xlnx_queues[tx_queue_id].dummy_packet = dummy_packet;
 
 	return 0;
 }
@@ -377,14 +301,12 @@ static void
 eth_queue_release(void *q)
 {
 	struct xlnx_queue *nq;
+	nq = q;
 
 	xlnx_log_info();
 
-	if (q == NULL)
+	if (nq == NULL)
 		return;
-
-	nq = q;
-	rte_free(nq->dummy_packet);
 }
 
 static int
@@ -426,8 +348,7 @@ static struct rte_vdev_driver pmd_xlnx_drv;
 
 static int
 eth_dev_xlnx_create(struct rte_vdev_device *dev,
-		unsigned packet_size,
-		unsigned packet_copy)
+		unsigned packet_size)
 {
 	const unsigned nb_rx_queues = 1;
 	const unsigned nb_tx_queues = 1;
@@ -466,7 +387,6 @@ eth_dev_xlnx_create(struct rte_vdev_device *dev,
 
 	internals = eth_dev->data->dev_private;
 	internals->packet_size = packet_size;
-	internals->packet_copy = packet_copy;
 	internals->port_id = eth_dev->data->port_id;
 
 	rte_memcpy(data, eth_dev->data, sizeof(*data));
@@ -479,13 +399,8 @@ eth_dev_xlnx_create(struct rte_vdev_device *dev,
 	eth_dev->dev_ops = &ops;
 
 	/* finally assign rx and tx ops */
-	if (packet_copy) {
-		eth_dev->rx_pkt_burst = eth_xlnx_copy_rx;
-		eth_dev->tx_pkt_burst = eth_xlnx_copy_tx;
-	} else {
-		eth_dev->rx_pkt_burst = eth_xlnx_rx;
-		eth_dev->tx_pkt_burst = eth_xlnx_tx;
-	}
+	eth_dev->rx_pkt_burst = eth_xlnx_rx;
+	eth_dev->tx_pkt_burst = eth_xlnx_tx;
 
 	return 0;
 }
@@ -507,29 +422,11 @@ get_packet_size_arg(const char *key __rte_unused,
 	return 0;
 }
 
-static inline int
-get_packet_copy_arg(const char *key __rte_unused,
-		const char *value, void *extra_args)
-{
-	const char *a = value;
-	unsigned *packet_copy = extra_args;
-
-	if ((value == NULL) || (extra_args == NULL))
-		return -EINVAL;
-
-	*packet_copy = (unsigned)strtoul(a, NULL, 0);
-	if (*packet_copy == UINT_MAX)
-		return -1;
-
-	return 0;
-}
-
 static int
 rte_pmd_xlnx_probe(struct rte_vdev_device *dev)
 {
 	const char *name, *params;
 	unsigned packet_size = default_packet_size;
-	unsigned packet_copy = default_packet_copy;
 	struct rte_kvargs *kvlist = NULL;
 	int ret;
 
@@ -554,21 +451,12 @@ rte_pmd_xlnx_probe(struct rte_vdev_device *dev)
 				goto free_kvlist;
 		}
 
-		if (rte_kvargs_count(kvlist, ETH_NULL_PACKET_COPY_ARG) == 1) {
-
-			ret = rte_kvargs_process(kvlist,
-					ETH_NULL_PACKET_COPY_ARG,
-					&get_packet_copy_arg, &packet_copy);
-			if (ret < 0)
-				goto free_kvlist;
-		}
 	}
 
-	RTE_LOG(INFO, PMD, "Configure pmd_xlnx: packet size is %d, "
-			"packet copy is %s\n", packet_size,
-			packet_copy ? "enabled" : "disabled");
+	RTE_LOG(INFO, PMD, "Configure pmd_xlnx: packet size is %d\n",
+			packet_size);
 
-	ret = eth_dev_xlnx_create(dev, packet_size, packet_copy);
+	ret = eth_dev_xlnx_create(dev, packet_size);
 
 free_kvlist:
 	if (kvlist)
@@ -608,5 +496,4 @@ static struct rte_vdev_driver pmd_xlnx_drv = {
 RTE_PMD_REGISTER_VDEV(net_xlnx, pmd_xlnx_drv);
 RTE_PMD_REGISTER_ALIAS(net_xlnx, eth_xlnx);
 RTE_PMD_REGISTER_PARAM_STRING(net_xlnx,
-	"size=<int> "
-	"copy=<int>");
+	"size=<int> ");
