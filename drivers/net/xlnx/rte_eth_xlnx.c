@@ -11,6 +11,7 @@
 #include <rte_kvargs.h>
 #include <rte_spinlock.h>
 #include "xlnx_logs.h"
+#include "xlnx_rdma.h"
 
 #define XLNX_MAX_QUEUE_PER_PORT	1
 
