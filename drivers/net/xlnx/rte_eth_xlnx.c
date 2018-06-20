@@ -15,12 +15,8 @@
 
 #define XLNX_MAX_QUEUE_PER_PORT	1
 
-#define ETH_NULL_PACKET_SIZE_ARG	"size"
-
-static unsigned default_packet_size = 64;
 
 static const char *valid_arguments[] = {
-	ETH_NULL_PACKET_SIZE_ARG,
 	NULL
 };
 
@@ -326,8 +322,7 @@ static const struct eth_dev_ops ops = {
 static struct rte_vdev_driver pmd_xlnx_drv;
 
 static int
-eth_dev_xlnx_create(struct rte_vdev_device *dev,
-		unsigned packet_size)
+eth_dev_xlnx_create(struct rte_vdev_device *dev)
 {
 	const unsigned nb_rx_queues = 1;
 	const unsigned nb_tx_queues = 1;
@@ -383,28 +378,11 @@ eth_dev_xlnx_create(struct rte_vdev_device *dev,
 	return 0;
 }
 
-static inline int
-get_packet_size_arg(const char *key __rte_unused,
-		const char *value, void *extra_args)
-{
-	const char *a = value;
-	unsigned *packet_size = extra_args;
-
-	if ((value == NULL) || (extra_args == NULL))
-		return -EINVAL;
-
-	*packet_size = (unsigned)strtoul(a, NULL, 0);
-	if (*packet_size == UINT_MAX)
-		return -1;
-
-	return 0;
-}
 
 static int
 rte_pmd_xlnx_probe(struct rte_vdev_device *dev)
 {
 	const char *name, *params;
-	unsigned packet_size = default_packet_size;
 	struct rte_kvargs *kvlist = NULL;
 	int ret;
 
@@ -419,24 +397,12 @@ rte_pmd_xlnx_probe(struct rte_vdev_device *dev)
 		kvlist = rte_kvargs_parse(params, valid_arguments);
 		if (kvlist == NULL)
 			return -1;
-
-		if (rte_kvargs_count(kvlist, ETH_NULL_PACKET_SIZE_ARG) == 1) {
-
-			ret = rte_kvargs_process(kvlist,
-					ETH_NULL_PACKET_SIZE_ARG,
-					&get_packet_size_arg, &packet_size);
-			if (ret < 0)
-				goto free_kvlist;
-		}
-
 	}
 
-	RTE_LOG(INFO, PMD, "Configure pmd_xlnx: packet size is %d\n",
-			packet_size);
+	RTE_LOG(INFO, PMD, "Configure pmd_xlnx\n");
 
-	ret = eth_dev_xlnx_create(dev, packet_size);
+	ret = eth_dev_xlnx_create(dev);
 
-free_kvlist:
 	if (kvlist)
 		rte_kvargs_free(kvlist);
 	return ret;
