@@ -61,7 +61,7 @@ struct rdma_queue {
 	void * pd_ring_vaddr;
 	uint64_t pd_ring_paddr;
 
-	struct mempool * mb_pool;
+	struct rte_mempool * mb_pool;
 
 	rte_atomic64_t rx_pkts;
 	rte_atomic64_t tx_pkts;
