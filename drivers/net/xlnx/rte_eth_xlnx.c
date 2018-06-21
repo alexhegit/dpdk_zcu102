@@ -160,28 +160,69 @@ eth_rx_queue_setup(struct rte_eth_dev *dev, uint16_t rx_queue_id,
 
 static int
 eth_tx_queue_setup(struct rte_eth_dev *dev, uint16_t tx_queue_id,
-		uint16_t nb_tx_desc __rte_unused,
+		uint16_t nb_tx_desc,
 		unsigned int socket_id __rte_unused,
 		const struct rte_eth_txconf *tx_conf __rte_unused)
 {
 	struct rdma_dev *rdma_dev;
+	struct rdma_queue *txq;
 
 	xlnx_log_info();
 
 	if (dev == NULL)
 		return -EINVAL;
 
-	rdma_dev = dev->data->dev_private;
+	if (!rte_is_power_of_2(nb_tx_desc)) {
+		RTE_LOG(ERR, PMD,
+			"Unsupported size of TX queue: %d not a power of 2\n",
+			nb_tx_desc);
+		return -EINVAL;
+	}
+
+	if (nb_tx_desc > XLNX_MAX_RING_SIZE) {
+		RTE_LOG(ERR, PMD,
+			"Unsupported size of TX queue (max size: %d)\n",
+			nb_tx_desc);
+		return -EINVAL;
+	}
 
 	if (tx_queue_id >= dev->data->nb_tx_queues)
 		return -ENODEV;
 
+	rdma_dev = dev->data->dev_private;
+	txq = &rdma_dev->tx_queues[tx_queue_id];
+
+	txq->ring_vaddr = rte_zmalloc("txq->ring_vaddr",
+			sizeof(union rdma_tx_desc) * nb_tx_desc,
+			RTE_CACHE_LINE_SIZE);
+	if (!txq->ring_vaddr) {
+		RTE_LOG(ERR, PMD, "failed to alloc mem for tx ring\n");
+		return -ENOMEM;
+	}
+	txq->ring_paddr = rte_mem_virt2phy(txq->ring_vaddr);
+
+	txq->mbuf_info = rte_zmalloc("txq->mbuf_info",
+			sizeof(struct rte_mbuf *) * nb_tx_desc,
+			RTE_CACHE_LINE_SIZE);
+	if (!txq->mbuf_info) {
+		RTE_LOG(ERR, PMD, "failed to alloc mem for tx mbuf info\n");
+		goto enomem;
+	}
+
+	txq->rdma_dev = rdma_dev;
+	txq->ring_size = nb_tx_desc;
+	txq->configured = 1;
+	rte_atomic64_init(&txq->tx_pkts);
+	rte_atomic64_init(&txq->err_pkts);
+
 	dev->data->tx_queues[tx_queue_id] =
 		&rdma_dev->tx_queues[tx_queue_id];
 
-	rdma_dev->tx_queues[tx_queue_id].rdma_dev = rdma_dev;
-
 	return 0;
+
+enomem:
+	rte_free(txq->ring_vaddr);
+	return -ENOMEM;
 }
 
 static int
