@@ -132,30 +132,82 @@ eth_dev_stop(struct rte_eth_dev *dev)
 
 static int
 eth_rx_queue_setup(struct rte_eth_dev *dev, uint16_t rx_queue_id,
-		uint16_t nb_rx_desc __rte_unused,
+		uint16_t nb_rx_desc,
 		unsigned int socket_id __rte_unused,
 		const struct rte_eth_rxconf *rx_conf __rte_unused,
 		struct rte_mempool *mb_pool)
 {
 	struct rdma_dev *rdma_dev;
+	struct rdma_queue *rxq;
+	uint32_t min_size;
 
 	xlnx_log_info();
 
 	if ((dev == NULL) || (mb_pool == NULL))
 		return -EINVAL;
 
-	rdma_dev = dev->data->dev_private;
-
 	if (rx_queue_id >= dev->data->nb_rx_queues)
 		return -ENODEV;
 
-	rdma_dev->rx_queues[rx_queue_id].mb_pool = mb_pool;
+	if (!rte_is_power_of_2(nb_rx_desc)) {
+		RTE_LOG(ERR, PMD,
+			"Unsupported size of RX queue: %d not a power of 2\n",
+			nb_rx_desc);
+		return -EINVAL;
+	}
+
+	if (nb_rx_desc > XLNX_MAX_RING_SIZE) {
+		RTE_LOG(ERR, PMD,
+			"Unsupported size of RX queue (max size: %d)\n",
+			nb_rx_desc);
+		return -EINVAL;
+	}
+
+	min_size = rte_pktmbuf_data_room_size(mb_pool) - RTE_PKTMBUF_HEADROOM;
+	if (min_size < XLNX_MAX_PKT_SIZE) {
+		RTE_LOG(ERR, PMD,
+			"Mbuf size must be increased to %u bytes to hold up to %u bytes of data.\n",
+			XLNX_MAX_PKT_SIZE + RTE_PKTMBUF_HEADROOM,
+			XLNX_MAX_PKT_SIZE);
+		return -EINVAL;
+	}
+
+	rdma_dev = dev->data->dev_private;
+	rxq = &rdma_dev->rx_queues[rx_queue_id];
+
+	rxq->ring_vaddr = rte_zmalloc("rxq->ring_vaddr",
+			sizeof(union rdma_rx_desc) * nb_rx_desc,
+			RTE_CACHE_LINE_SIZE);
+	if (!rxq->ring_vaddr) {
+		RTE_LOG(ERR, PMD, "failed to alloc mem for rx ring\n");
+		return -ENOMEM;
+	}
+	rxq->ring_paddr = rte_mem_virt2phy(rxq->ring_vaddr);
+
+	rxq->mbuf_info = rte_zmalloc("rxq->mbuf_info",
+			sizeof(struct rte_mbuf *) * nb_rx_desc,
+			RTE_CACHE_LINE_SIZE);
+	if (!rxq->mbuf_info) {
+		RTE_LOG(ERR, PMD, "failed to alloc mem for rx mbuf info\n");
+		goto enomem;
+	}
+
+	rxq->rdma_dev = rdma_dev;
+	rxq->mb_pool = mb_pool;
+	rxq->ring_size = nb_rx_desc;
+	rxq->configured = 1;
+	rte_atomic64_init(&rxq->rx_pkts);
+	rte_atomic64_init(&rxq->err_pkts);
+
+
 	dev->data->rx_queues[rx_queue_id] =
 		&rdma_dev->rx_queues[rx_queue_id];
 
-	rdma_dev->rx_queues[rx_queue_id].rdma_dev = rdma_dev;
-
 	return 0;
+
+enomem:
+	rte_free(rxq->ring_vaddr);
+	return -ENOMEM;
 }
 
 static int

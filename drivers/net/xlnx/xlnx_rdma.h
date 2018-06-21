@@ -6,6 +6,7 @@
 #define __XLNX_RDMA_H__
 
 #define XLNX_MAX_RING_SIZE 4096
+#define XLNX_MAX_PKT_SIZE 9600
 #define XLNX_MAX_QUEUE_PER_PORT	1
 
 struct rdma_dev;
