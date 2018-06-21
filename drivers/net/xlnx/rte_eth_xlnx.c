@@ -13,6 +13,8 @@
 #include "xlnx_logs.h"
 #include "xlnx_rdma.h"
 
+#define DRIVER_NAME net_xlnx
+
 #define XLNX_MAX_QUEUE_PER_PORT	1
 
 
@@ -23,7 +25,7 @@ static const char *valid_arguments[] = {
 
 static struct ether_addr eth_addr = { .addr_bytes = {0} };
 static struct rte_eth_link pmd_link = {
-	.link_speed = ETH_SPEED_NUM_10G,
+	.link_speed = ETH_SPEED_NUM_25G,
 	.link_duplex = ETH_LINK_FULL_DUPLEX,
 	.link_status = ETH_LINK_DOWN,
 	.link_autoneg = ETH_LINK_AUTONEG,
@@ -297,11 +299,14 @@ eth_dev_info(struct rte_eth_dev *dev,
 		return;
 
 	rdma_dev = dev->data->dev_private;
+	dev_info->driver_name = RTE_STR(DRIVER_NAME);
+	dev_info->speed_capa = ETH_LINK_SPEED_25G;
 	dev_info->max_mac_addrs = 1;
-	dev_info->max_rx_pktlen = (uint32_t)-1;
+	dev_info->max_rx_pktlen = XLNX_MAX_PKT_SIZE;
 	dev_info->max_rx_queues = RTE_DIM(rdma_dev->rx_queues);
 	dev_info->max_tx_queues = RTE_DIM(rdma_dev->tx_queues);
 	dev_info->min_rx_bufsize = 0;
+	dev_info->pci_dev = NULL;
 }
 
 static int
