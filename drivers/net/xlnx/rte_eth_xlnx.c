@@ -325,6 +325,22 @@ eth_queue_release(void *q)
 		return;
 }
 
+static void
+eth_tx_queue_release(void *q)
+{
+	struct rdma_queue *txq;
+
+	txq = q;
+
+	xlnx_log_info();
+
+	if (txq == NULL)
+		return;
+
+	rte_free(txq->ring_vaddr);
+	rte_free(txq->mbuf_info);
+}
+
 static int
 eth_link_update(struct rte_eth_dev *dev __rte_unused,
 		int wait_to_complete __rte_unused)
@@ -352,7 +368,7 @@ static const struct eth_dev_ops ops = {
 	.rx_queue_setup = eth_rx_queue_setup,
 	.tx_queue_setup = eth_tx_queue_setup,
 	.rx_queue_release = eth_queue_release,
-	.tx_queue_release = eth_queue_release,
+	.tx_queue_release = eth_tx_queue_release,
 	.mtu_set = eth_mtu_set,
 	.link_update = eth_link_update,
 	.mac_addr_set = eth_mac_address_set,
