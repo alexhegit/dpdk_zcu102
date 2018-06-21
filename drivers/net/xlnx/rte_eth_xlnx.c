@@ -373,16 +373,17 @@ eth_stats_reset(struct rte_eth_dev *dev)
 static void
 eth_rx_queue_release(void *q)
 {
-	struct rdma_queue *txq;
-	txq = q;
+	struct rdma_queue *rxq;
+	rxq = q;
 
 	xlnx_log_info();
 
-	if (txq == NULL)
+	if (rxq == NULL)
 		return;
 
-	rte_free(txq->ring_vaddr);
-	rte_free(txq->mbuf_info);
+	rxq->configured = 0;
+	rte_free(rxq->ring_vaddr);
+	rte_free(rxq->mbuf_info);
 }
 
 static void
@@ -397,6 +398,7 @@ eth_tx_queue_release(void *q)
 	if (txq == NULL)
 		return;
 
+	txq->configured = 0;
 	rte_free(txq->ring_vaddr);
 	rte_free(txq->mbuf_info);
 }
