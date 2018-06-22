@@ -418,6 +418,41 @@ eth_link_update(struct rte_eth_dev *dev __rte_unused,
 	return 0;
 }
 
+static void eth_rx_queue_release_all(struct rte_eth_dev *dev)
+{
+	struct rdma_queue **queues = (struct rdma_queue **)dev->data->rx_queues;
+	int nb_queues = dev->data->nb_rx_queues;
+	int i;
+
+	for (i = 0; i < nb_queues; i++)
+		eth_rx_queue_release(queues[i]);
+}
+
+static void eth_tx_queue_release_all(struct rte_eth_dev *dev)
+{
+	struct rdma_queue **queues = (struct rdma_queue **)dev->data->tx_queues;
+	int nb_queues = dev->data->nb_tx_queues;
+	int i;
+
+	for (i = 0; i < nb_queues; i++)
+		eth_tx_queue_release(queues[i]);
+}
+
+static void
+eth_dev_close(struct rte_eth_dev *dev)
+{
+	xlnx_log_info();
+
+	dev->data->dev_link.link_status = ETH_LINK_DOWN;
+
+	/* TODO
+	 * HW: disable EN bit for TX and RX channel in HW
+	 * HW: Clear PD buffer in HW(reset DMA, write disable bit=1, wait until
+	 * hardware set it to 0
+	 * */
+	eth_rx_queue_release_all(dev);
+	eth_tx_queue_release_all(dev);
+}
 
 static void
 eth_mac_address_set(__rte_unused struct rte_eth_dev *dev,
@@ -431,6 +466,7 @@ eth_mac_address_set(__rte_unused struct rte_eth_dev *dev,
 static const struct eth_dev_ops ops = {
 	.dev_start = eth_dev_start,
 	.dev_stop = eth_dev_stop,
+	.dev_close = eth_dev_close,
 	.dev_configure = eth_dev_configure,
 	.dev_infos_get = eth_dev_info,
 	.rx_queue_setup = eth_rx_queue_setup,
