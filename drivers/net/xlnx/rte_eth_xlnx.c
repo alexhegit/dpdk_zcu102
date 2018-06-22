@@ -407,7 +407,13 @@ static int
 eth_link_update(struct rte_eth_dev *dev __rte_unused,
 		int wait_to_complete __rte_unused)
 {
+	struct rte_eth_link *link = &dev->data->dev_link;
+
 	xlnx_log_info();
+
+	link->link_status = 1;
+	link->link_speed = ETH_SPEED_NUM_25G;
+	link->link_duplex = ETH_LINK_FULL_DUPLEX;
 
 	return 0;
 }
