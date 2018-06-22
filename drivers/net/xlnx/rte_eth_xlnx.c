@@ -17,8 +17,10 @@
 
 #define XLNX_MAX_QUEUE_PER_PORT	1
 
+#define XLNX_RDMA_REGS_PBASE	"pbase"
 
 static const char *valid_arguments[] = {
+	XLNX_RDMA_REGS_PBASE,
 	NULL
 };
 
@@ -483,7 +485,7 @@ static const struct eth_dev_ops ops = {
 static struct rte_vdev_driver pmd_xlnx_drv;
 
 static int
-eth_dev_xlnx_create(struct rte_vdev_device *dev)
+eth_dev_xlnx_create(struct rte_vdev_device *dev, uint64_t regs_pbase)
 {
 	const unsigned nb_rx_queues = 1;
 	const unsigned nb_tx_queues = 1;
@@ -522,6 +524,7 @@ eth_dev_xlnx_create(struct rte_vdev_device *dev)
 
 	rdma_dev = eth_dev->data->dev_private;
 	rdma_dev->port_id = eth_dev->data->port_id;
+	rdma_dev->regs_pbase = regs_pbase;
 
 	rte_memcpy(data, eth_dev->data, sizeof(*data));
 	data->nb_rx_queues = (uint16_t)nb_rx_queues;
@@ -539,12 +542,29 @@ eth_dev_xlnx_create(struct rte_vdev_device *dev)
 	return 0;
 }
 
+static inline int
+get_rdma_regs_pbase(const char *key __rte_unused,
+		const char *value, void *extra_args)
+{
+	const char *a = value;
+	unsigned *regs_pbase = extra_args;
+
+	if ((value == NULL) || (extra_args == NULL))
+		return -EINVAL;
+
+	*regs_pbase = (unsigned)strtoul(a, NULL, 0);
+	if (*regs_pbase == UINT_MAX)
+		return -1;
+
+	return 0;
+}
 
 static int
 rte_pmd_xlnx_probe(struct rte_vdev_device *dev)
 {
 	const char *name, *params;
 	struct rte_kvargs *kvlist = NULL;
+	uint64_t regs_pbase;
 	int ret;
 
 	if (!dev)
@@ -558,12 +578,22 @@ rte_pmd_xlnx_probe(struct rte_vdev_device *dev)
 		kvlist = rte_kvargs_parse(params, valid_arguments);
 		if (kvlist == NULL)
 			return -1;
+
+		if (rte_kvargs_count(kvlist, XLNX_RDMA_REGS_PBASE) == 1) {
+
+			ret = rte_kvargs_process(kvlist,
+					XLNX_RDMA_REGS_PBASE,
+					&get_rdma_regs_pbase, &regs_pbase);
+			if (ret < 0)
+				goto free_kvlist;
+		}
 	}
 
-	RTE_LOG(INFO, PMD, "Configure pmd_xlnx\n");
+	RTE_LOG(INFO, PMD, "Configure pmd_xlnx, regs_pbase=%lu\n", regs_pbase);
 
-	ret = eth_dev_xlnx_create(dev);
+	ret = eth_dev_xlnx_create(dev, regs_pbase);
 
+free_kvlist:
 	if (kvlist)
 		rte_kvargs_free(kvlist);
 	return ret;
