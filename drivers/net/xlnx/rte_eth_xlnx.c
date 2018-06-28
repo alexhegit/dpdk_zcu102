@@ -484,6 +484,22 @@ static const struct eth_dev_ops ops = {
 
 static struct rte_vdev_driver pmd_xlnx_drv;
 
+static void
+xlnx_regs_mmap(struct rdma_dev *rdma_dev)
+{
+	int fd;
+
+	fd = open("/dev/mem", O_RDWR | O_SYNC);
+	if (fd < 0)
+		return -1;
+
+	rdma_dev->regs_vbase = mmap(NULL, 4096,
+			PROT_READ | PROT_WRITE, MAP_SHARED,
+			fd, rdma_dev->regs_pbase);
+
+	close(fd);
+}
+
 static int
 eth_dev_xlnx_create(struct rte_vdev_device *dev, uint64_t regs_pbase)
 {
@@ -525,6 +541,7 @@ eth_dev_xlnx_create(struct rte_vdev_device *dev, uint64_t regs_pbase)
 	rdma_dev = eth_dev->data->dev_private;
 	rdma_dev->port_id = eth_dev->data->port_id;
 	rdma_dev->regs_pbase = regs_pbase;
+	xlnx_regs_mmap(rdma_dev);
 
 	rte_memcpy(data, eth_dev->data, sizeof(*data));
 	data->nb_rx_queues = (uint16_t)nb_rx_queues;
