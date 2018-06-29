@@ -143,7 +143,9 @@ eth_rx_queue_setup(struct rte_eth_dev *dev, uint16_t rx_queue_id,
 {
 	struct rdma_dev *rdma_dev;
 	struct rdma_queue *rxq;
+	struct rte_mbuf **mbufs;
 	uint32_t min_size;
+	int ret;
 
 	xlnx_log_info();
 
@@ -188,10 +190,8 @@ eth_rx_queue_setup(struct rte_eth_dev *dev, uint16_t rx_queue_id,
 	}
 	rxq->ring_paddr = rte_mem_virt2phy(rxq->ring_vaddr);
 
-	rxq->mbuf_info = rte_zmalloc("rxq->mbuf_info",
-			sizeof(struct rte_mbuf *) * nb_rx_desc,
-			RTE_CACHE_LINE_SIZE);
-	if (!rxq->mbuf_info) {
+	ret = rte_pktmbuf_alloc_bulk(mb_pool, mbufs, nb_rx_desc);
+	if (unlikely(ret)) {
 		RTE_LOG(ERR, PMD, "failed to alloc mem for rx mbuf info\n");
 		goto enomem;
 	}
@@ -199,19 +199,20 @@ eth_rx_queue_setup(struct rte_eth_dev *dev, uint16_t rx_queue_id,
 	rxq->rdma_dev = rdma_dev;
 	rxq->mb_pool = mb_pool;
 	rxq->ring_size = nb_rx_desc;
-	rxq->configured = 1;
+	rxq->mbuf_info = mbufs;
 	rte_atomic64_init(&rxq->rx_pkts);
 	rte_atomic64_init(&rxq->err_pkts);
-
 
 	dev->data->rx_queues[rx_queue_id] =
 		&rdma_dev->rx_queues[rx_queue_id];
 
+	rxq->configured = 1;
 	return 0;
 
 enomem:
 	rte_free(rxq->ring_vaddr);
-	return -ENOMEM;
+
+	return ret;
 }
 
 static int
