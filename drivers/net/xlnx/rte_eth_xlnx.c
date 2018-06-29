@@ -2,6 +2,9 @@
  * Copyright(c) 2018 Xilinx, Inc
  */
 
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/mman.h>
 #include <rte_mbuf.h>
 #include <rte_ethdev_driver.h>
 #include <rte_ethdev_vdev.h>
@@ -143,7 +146,6 @@ eth_rx_queue_setup(struct rte_eth_dev *dev, uint16_t rx_queue_id,
 {
 	struct rdma_dev *rdma_dev;
 	struct rdma_queue *rxq;
-	struct rte_mbuf **mbufs;
 	uint32_t min_size;
 	int ret;
 
@@ -190,7 +192,7 @@ eth_rx_queue_setup(struct rte_eth_dev *dev, uint16_t rx_queue_id,
 	}
 	rxq->ring_paddr = rte_mem_virt2phy(rxq->ring_vaddr);
 
-	ret = rte_pktmbuf_alloc_bulk(mb_pool, mbufs, nb_rx_desc);
+	ret = rte_pktmbuf_alloc_bulk(mb_pool, rxq->mbuf_info, nb_rx_desc);
 	if (unlikely(ret)) {
 		RTE_LOG(ERR, PMD, "failed to alloc mem for rx mbuf info\n");
 		goto enomem;
@@ -199,7 +201,6 @@ eth_rx_queue_setup(struct rte_eth_dev *dev, uint16_t rx_queue_id,
 	rxq->rdma_dev = rdma_dev;
 	rxq->mb_pool = mb_pool;
 	rxq->ring_size = nb_rx_desc;
-	rxq->mbuf_info = mbufs;
 	rte_atomic64_init(&rxq->rx_pkts);
 	rte_atomic64_init(&rxq->err_pkts);
 
@@ -491,8 +492,6 @@ xlnx_regs_mmap(struct rdma_dev *rdma_dev)
 	int fd;
 
 	fd = open("/dev/mem", O_RDWR | O_SYNC);
-	if (fd < 0)
-		return -1;
 
 	rdma_dev->regs_vbase = mmap(NULL, 4096,
 			PROT_READ | PROT_WRITE, MAP_SHARED,
