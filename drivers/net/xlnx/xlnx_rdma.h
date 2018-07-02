@@ -56,6 +56,8 @@ struct rdma_queue {
 	uint32_t sw_c;
 	uint32_t hw_p;
 	uint32_t hw_c;
+	uint32_t *hw_producer;
+	uint32_t *hw_consumer;
 
 	uint32_t ring_size;
 	struct rte_mbuf ** mbufs_info;
