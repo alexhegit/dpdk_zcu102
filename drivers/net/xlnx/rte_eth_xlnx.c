@@ -192,7 +192,7 @@ eth_rx_queue_setup(struct rte_eth_dev *dev, uint16_t rx_queue_id,
 	}
 	rxq->ring_paddr = rte_mem_virt2phy(rxq->ring_vaddr);
 
-	ret = rte_pktmbuf_alloc_bulk(mb_pool, rxq->mbuf_info, nb_rx_desc);
+	ret = rte_pktmbuf_alloc_bulk(mb_pool, rxq->mbufs_info, nb_rx_desc);
 	if (unlikely(ret)) {
 		RTE_LOG(ERR, PMD, "failed to alloc mem for rx mbuf info\n");
 		goto enomem;
@@ -259,10 +259,10 @@ eth_tx_queue_setup(struct rte_eth_dev *dev, uint16_t tx_queue_id,
 	}
 	txq->ring_paddr = rte_mem_virt2phy(txq->ring_vaddr);
 
-	txq->mbuf_info = rte_zmalloc("txq->mbuf_info",
+	txq->mbufs_info = rte_zmalloc("txq->mbufs_info",
 			sizeof(struct rte_mbuf *) * nb_tx_desc,
 			RTE_CACHE_LINE_SIZE);
-	if (!txq->mbuf_info) {
+	if (!txq->mbufs_info) {
 		RTE_LOG(ERR, PMD, "failed to alloc mem for tx mbuf info\n");
 		goto enomem;
 	}
@@ -387,7 +387,7 @@ eth_rx_queue_release(void *q)
 
 	rxq->configured = 0;
 	rte_free(rxq->ring_vaddr);
-	rte_free(rxq->mbuf_info);
+	rte_free(rxq->mbufs_info);
 }
 
 static void
@@ -404,7 +404,7 @@ eth_tx_queue_release(void *q)
 
 	txq->configured = 0;
 	rte_free(txq->ring_vaddr);
-	rte_free(txq->mbuf_info);
+	rte_free(txq->mbufs_info);
 }
 
 static int

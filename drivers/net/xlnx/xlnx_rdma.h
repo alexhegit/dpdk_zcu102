@@ -58,7 +58,7 @@ struct rdma_queue {
 	uint32_t hw_c;
 
 	uint32_t ring_size;
-	struct rte_mbuf ** mbuf_info;
+	struct rte_mbuf ** mbufs_info;
 	void * ring_vaddr;
 	phys_addr_t ring_paddr;
 
