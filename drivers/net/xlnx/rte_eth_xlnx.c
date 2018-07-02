@@ -387,6 +387,7 @@ static void
 eth_rx_queue_release(void *q)
 {
 	struct rdma_queue *rxq;
+	uint32_t i;
 	rxq = q;
 
 	xlnx_log_info();
@@ -396,7 +397,8 @@ eth_rx_queue_release(void *q)
 
 	rxq->configured = 0;
 	rte_free(rxq->ring_vaddr);
-	rte_free(rxq->mbufs_info);
+	for (i = 0; i < rxq->ring_size; i++)
+		rte_pktmbuf_free(rxq->mbufs_info[i]);
 }
 
 static void
