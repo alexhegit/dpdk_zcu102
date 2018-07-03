@@ -193,6 +193,15 @@ eth_rx_queue_setup(struct rte_eth_dev *dev, uint16_t rx_queue_id,
 	}
 	rxq->ring_paddr = rte_mem_virt2phy(rxq->ring_vaddr);
 
+	rxq->status_vaddr = rte_zmalloc("rxq->status_vaddr",
+			XLNX_QUEUE_STATUS_MSIZE, RTE_CACHE_LINE_SIZE);
+	if (!rxq->status_vaddr) {
+		RTE_LOG(ERR, PMD, "failed to alloc mem for rx queue status\n");
+		ret = -ENOMEM;
+		goto free_ring;
+	}
+	rxq->status_paddr = rte_mem_virt2phy(rxq->status_vaddr);
+
 	ret = rte_pktmbuf_alloc_bulk(mb_pool, rxq->mbufs_info, nb_rx_desc);
 	if (unlikely(ret)) {
 		RTE_LOG(ERR, PMD, "failed to alloc mem for rx mbuf info\n");
@@ -220,6 +229,8 @@ eth_rx_queue_setup(struct rte_eth_dev *dev, uint16_t rx_queue_id,
 	return 0;
 
 enomem:
+	rte_free(rxq->status_vaddr);
+free_ring:
 	rte_free(rxq->ring_vaddr);
 
 	return ret;
@@ -233,6 +244,7 @@ eth_tx_queue_setup(struct rte_eth_dev *dev, uint16_t tx_queue_id,
 {
 	struct rdma_dev *rdma_dev;
 	struct rdma_queue *txq;
+	int ret __rte_unused;
 
 	xlnx_log_info();
 
@@ -268,6 +280,15 @@ eth_tx_queue_setup(struct rte_eth_dev *dev, uint16_t tx_queue_id,
 	}
 	txq->ring_paddr = rte_mem_virt2phy(txq->ring_vaddr);
 
+	txq->status_vaddr = rte_zmalloc("txq->status_vaddr",
+			XLNX_QUEUE_STATUS_MSIZE, RTE_CACHE_LINE_SIZE);
+	if (!txq->status_vaddr) {
+		RTE_LOG(ERR, PMD, "failed to alloc mem for tx queue status\n");
+		ret = -ENOMEM;
+		goto free_ring;
+	}
+	txq->status_paddr = rte_mem_virt2phy(txq->status_vaddr);
+
 	txq->mbufs_info = rte_zmalloc("txq->mbufs_info",
 			sizeof(struct rte_mbuf *) * nb_tx_desc,
 			RTE_CACHE_LINE_SIZE);
@@ -288,6 +309,8 @@ eth_tx_queue_setup(struct rte_eth_dev *dev, uint16_t tx_queue_id,
 	return 0;
 
 enomem:
+	rte_free(txq->status_vaddr);
+free_ring:
 	rte_free(txq->ring_vaddr);
 	return -ENOMEM;
 }
@@ -397,6 +420,7 @@ eth_rx_queue_release(void *q)
 
 	rxq->configured = 0;
 	rte_free(rxq->ring_vaddr);
+	rte_free(rxq->status_vaddr);
 	for (i = 0; i < rxq->ring_size; i++)
 		rte_pktmbuf_free(rxq->mbufs_info[i]);
 }
@@ -415,6 +439,7 @@ eth_tx_queue_release(void *q)
 
 	txq->configured = 0;
 	rte_free(txq->ring_vaddr);
+	rte_free(txq->status_vaddr);
 	rte_free(txq->mbufs_info);
 }
 

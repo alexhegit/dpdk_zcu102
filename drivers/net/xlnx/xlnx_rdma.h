@@ -8,6 +8,7 @@
 #define XLNX_MAX_RING_SIZE 4096
 #define XLNX_MAX_PKT_SIZE 9600
 #define XLNX_MAX_QUEUE_PER_PORT	1
+#define XLNX_QUEUE_STATUS_MSIZE 4096
 
 struct rdma_dev;
 
@@ -63,6 +64,8 @@ struct rdma_queue {
 	struct rte_mbuf ** mbufs_info;
 	void * ring_vaddr;
 	phys_addr_t ring_paddr;
+	void * status_vaddr;
+	phys_addr_t status_paddr;
 
 	struct rte_mempool * mb_pool;
 
