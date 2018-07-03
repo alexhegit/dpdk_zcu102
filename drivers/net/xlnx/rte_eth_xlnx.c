@@ -116,6 +116,82 @@ eth_xlnx_reset_rdma(struct rdma_dev *rdma_dev)
 	usleep(100);
 }
 
+static __rte_unused int
+eth_xlnx_disable_rx_queue(struct rdma_dev *rdma_dev)
+{
+	uint32_t val;
+	uint32_t cnt;
+
+	val = RDMA_REG_RD32((uint32_t *)((uint8_t *)rdma_dev->regs_vbase
+			+ RDMA_RX_CTRL));
+	RDMA_REG_WR32(val & ~RDMA_RX_CTRL_RXEN,
+		(uint32_t *)((uint8_t *)rdma_dev->regs_vbase + RDMA_RX_CTRL));
+
+	/* hardware may need about 100us */
+	do {
+		val = RDMA_REG_RD32(
+			(uint32_t *)((uint8_t *)rdma_dev->regs_vbase
+			+ RDMA_RX_CTRL));
+		usleep(10);
+	} while (--cnt && (val & RDMA_RX_CTRL_RXEN));
+	if (!cnt) {
+		RTE_LOG(INFO, PMD, "failed to stop rx queue\n");
+		return -EBUSY;
+	}
+
+	return 0;
+}
+
+static __rte_unused int
+eth_xlnx_enable_rx_queue(struct rdma_dev *rdma_dev)
+{
+	uint32_t val;
+	val = RDMA_REG_RD32((uint32_t *)((uint8_t *)rdma_dev->regs_vbase
+			+ RDMA_RX_CTRL));
+	RDMA_REG_WR32(val | RDMA_RX_CTRL_RXEN,
+		(uint32_t *)((uint8_t *)rdma_dev->regs_vbase + RDMA_RX_CTRL));
+
+	return 0;
+}
+
+static __rte_unused int
+eth_xlnx_disable_tx_queue(struct rdma_dev *rdma_dev)
+{
+	uint32_t val;
+	uint32_t cnt;
+
+	val = RDMA_REG_RD32((uint32_t *)((uint8_t *)rdma_dev->regs_vbase
+			+ RDMA_TX_CTRL));
+	RDMA_REG_WR32(val & ~RDMA_TX_CTRL_TXEN,
+		(uint32_t *)((uint8_t *)rdma_dev->regs_vbase + RDMA_TX_CTRL));
+
+	/* hardware may need about 100us */
+	do {
+		val = RDMA_REG_RD32(
+			(uint32_t *)((uint8_t *)rdma_dev->regs_vbase
+			+ RDMA_TX_CTRL));
+		usleep(10);
+	} while (--cnt && (val & RDMA_TX_CTRL_TXEN));
+	if (!cnt) {
+		RTE_LOG(INFO, PMD, "failed to stop tx queue\n");
+		return -EBUSY;
+	}
+
+	return 0;
+}
+
+static __rte_unused int
+eth_xlnx_enable_tx_queue(struct rdma_dev *rdma_dev)
+{
+	uint32_t val;
+	val = RDMA_REG_RD32((uint32_t *)((uint8_t *)rdma_dev->regs_vbase
+			+ RDMA_TX_CTRL));
+	RDMA_REG_WR32(val | RDMA_TX_CTRL_TXEN,
+		(uint32_t *)((uint8_t *)rdma_dev->regs_vbase + RDMA_TX_CTRL));
+
+	return 0;
+}
+
 static int
 eth_dev_configure(struct rte_eth_dev *dev __rte_unused)
 {

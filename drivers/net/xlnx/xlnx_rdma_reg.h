@@ -128,6 +128,10 @@
 /*  DMA Reset Register */
 #define RDMA_RX_RESET (RDMA_RX_BASE_ADDR + 0x0040)
 
+/* bit mask */
+#define RDMA_RX_CTRL_RXEN	0x00000001
+#define RDMA_TX_CTRL_TXEN	0x00000001
+
 #define RDMA_REG_RD32(reg) rte_read32((reg))
 #define RDMA_REG_WR32(value, reg) rte_write32((value), (reg))
 
