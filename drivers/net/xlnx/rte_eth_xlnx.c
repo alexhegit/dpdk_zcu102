@@ -107,6 +107,15 @@ eth_xlnx_tx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 	return i;
 }
 
+static inline void
+eth_xlnx_reset_rdma(struct rdma_dev *rdma_dev)
+{
+	RDMA_REG_WR32(0x0, (uint32_t *)((uint8_t *)rdma_dev->regs_vbase + 0xC0));
+	usleep(100);
+	RDMA_REG_WR32(0x2, (uint32_t *)((uint8_t *)rdma_dev->regs_vbase + 0xC0));
+	usleep(100);
+}
+
 static int
 eth_dev_configure(struct rte_eth_dev *dev __rte_unused)
 {
