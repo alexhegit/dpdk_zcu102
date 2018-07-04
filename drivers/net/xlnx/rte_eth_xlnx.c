@@ -221,10 +221,16 @@ eth_dev_configure(struct rte_eth_dev *dev)
 static int
 eth_dev_start(struct rte_eth_dev *dev)
 {
+	struct rdma_dev *rdma_dev;
 	xlnx_log_info();
 
 	if (dev == NULL)
 		return -EINVAL;
+
+	rdma_dev = dev->data->dev_private;
+
+	eth_xlnx_enable_tx_queue(rdma_dev);
+	eth_xlnx_enable_rx_queue(rdma_dev);
 
 	dev->data->dev_link.link_status = ETH_LINK_UP;
 	return 0;
