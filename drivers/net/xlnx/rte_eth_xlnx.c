@@ -385,12 +385,18 @@ eth_tx_queue_setup(struct rte_eth_dev *dev, uint16_t tx_queue_id,
 
 	txq->rdma_dev = rdma_dev;
 	txq->ring_size = nb_tx_desc;
-	txq->configured = 1;
+	txq->sw_p = 0;
+	txq->sw_c = 0;
+	txq->hw_p = 0;
+	txq->hw_c = 0;
+
 	rte_atomic64_init(&txq->tx_pkts);
 	rte_atomic64_init(&txq->err_pkts);
 
 	dev->data->tx_queues[tx_queue_id] =
 		&rdma_dev->tx_queues[tx_queue_id];
+
+	txq->configured = 1;
 
 	return 0;
 
