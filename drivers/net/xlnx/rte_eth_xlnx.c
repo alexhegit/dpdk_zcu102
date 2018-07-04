@@ -232,6 +232,8 @@ eth_dev_start(struct rte_eth_dev *dev)
 	eth_xlnx_enable_tx_queue(rdma_dev);
 	eth_xlnx_enable_rx_queue(rdma_dev);
 
+	eth_xlnx_reset_rdma(rdma_dev);
+
 	dev->data->dev_link.link_status = ETH_LINK_UP;
 	return 0;
 }
