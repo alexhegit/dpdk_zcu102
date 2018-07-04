@@ -193,9 +193,24 @@ eth_xlnx_enable_tx_queue(struct rdma_dev *rdma_dev)
 }
 
 static int
-eth_dev_configure(struct rte_eth_dev *dev __rte_unused)
+eth_dev_configure(struct rte_eth_dev *dev)
 {
 	xlnx_log_info();
+	struct rdma_dev *rdma_dev;
+
+	if (dev == NULL)
+		return -EINVAL;
+
+	rdma_dev = dev->data->dev_private;
+	/* Config the HW */
+	rdma_dev->pkt_batch = XLNX_RDMA_PKT_BATCH;
+	rdma_dev->pkt_th_delay = XLNX_RDMA_PKT_TH_DELAY;
+	rdma_dev->irq_resent = XLNX_RDMA_IRQ_RESENT;
+	rdma_dev->irq_threshold = XLNX_RDMA_IRQ_THRESHOLD;
+	rdma_dev->irq_delay = XLNX_RDMA_IRQ_DELAY;
+
+	eth_xlnx_disable_rx_queue(rdma_dev);
+	eth_xlnx_disable_tx_queue(rdma_dev);
 
 	return 0;
 }

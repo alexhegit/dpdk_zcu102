@@ -76,12 +76,24 @@ struct rdma_queue {
 	uint32_t configured;
 };
 
+#define XLNX_RDMA_PKT_BATCH 1
+#define XLNX_RDMA_PKT_TH_DELAY 32
+#define XLNX_RDMA_IRQ_RESENT 100
+#define XLNX_RDMA_IRQ_THRESHOLD 16
+#define XLNX_RDMA_IRQ_DELAY 50
+
 /* rdma_dev */
 struct rdma_dev {
 	uint64_t regs_pbase;
 	void * regs_vbase;
 
 	uint16_t port_id;
+
+	uint32_t pkt_batch; /* Packet prefect batch size */
+	uint32_t pkt_th_delay; /* Packet prefect batch size delay */
+	uint32_t irq_resent; /* Interrupt delay in us */
+	uint32_t irq_threshold; /* Interrupt threshold */
+	uint32_t irq_delay; /* Interrupt delay in us */
 
 	struct rdma_queue rx_queues[XLNX_MAX_QUEUE_PER_PORT];
 	struct rdma_queue tx_queues[XLNX_MAX_QUEUE_PER_PORT];
