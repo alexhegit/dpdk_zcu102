@@ -320,11 +320,30 @@ eth_rx_queue_setup(struct rte_eth_dev *dev, uint16_t rx_queue_id,
 	rxq->hw_c = 0;
 	rxq->hw_producer = (uint32_t *)((uint8_t *)rdma_dev->regs_vbase + RDMA_TXRING_PRODUCER);
 	rxq->hw_consumer = (uint32_t *)((uint8_t *)rdma_dev->regs_vbase + RDMA_TXRING_CONSUMER);
-	RDMA_REG_WR32(0, rxq->hw_producer);
-	RDMA_REG_WR32(0, rxq->hw_consumer);
 
 	rte_atomic64_init(&rxq->rx_pkts);
 	rte_atomic64_init(&rxq->err_pkts);
+
+	rdma_reg_write(rdma_dev->regs_vbase, RDMA_RXRING_START_ADDR_L,
+			rxq->ring_paddr & RDMA_ADDRL_MASK);
+	rdma_reg_write(rdma_dev->regs_vbase, RDMA_RXRING_START_ADDR_H,
+			(rxq->ring_paddr & RDMA_ADDRH_MASK) >> 32);
+	rdma_reg_write(rdma_dev->regs_vbase, RDMA_RXRING_SIZE,
+			rxq->ring_size);
+	rdma_reg_write(rdma_dev->regs_vbase, RDMA_RXRING_CONSUMER_ADDR_L,
+			rxq->status_paddr & RDMA_ADDRL_MASK);
+	rdma_reg_write(rdma_dev->regs_vbase, RDMA_RXRING_CONSUMER_ADDR_H,
+			(rxq->status_paddr & RDMA_ADDRH_MASK) >> 32);
+
+	rdma_reg_write(rdma_dev->regs_vbase, RDMA_RXPKT_BATCH_SIZE,
+			(rdma_dev->pkt_batch << 16) | rdma_dev->pkt_th_delay);
+	rdma_reg_write(rdma_dev->regs_vbase, RDMA_RX_INT_RESEND_CTRL,
+			rdma_dev->irq_resent);
+	rdma_reg_write(rdma_dev->regs_vbase, RDMA_RX_INT_THRESHOLD_DELAY,
+			(rdma_dev->irq_threshold << 16) | rdma_dev->irq_delay);
+
+	rdma_reg_write(rdma_dev->regs_vbase, RDMA_RXRING_PRODUCER, 0);
+	rdma_reg_write(rdma_dev->regs_vbase, RDMA_RXRING_CONSUMER, 0);
 
 	dev->data->rx_queues[rx_queue_id] =
 		&rdma_dev->rx_queues[rx_queue_id];

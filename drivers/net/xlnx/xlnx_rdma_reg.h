@@ -8,6 +8,9 @@
 
 #include <rte_io.h>
 
+#define RDMA_ADDRH_MASK 0xFFFFFFFF00000000
+#define RDMA_ADDRL_MASK 0x00000000FFFFFFFF
+
 /* DMA Registers */
 #define  RDMA_BASE_ADDR (0x0000)
 
