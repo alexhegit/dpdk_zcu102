@@ -299,6 +299,7 @@ eth_rx_queue_setup(struct rte_eth_dev *dev, uint16_t rx_queue_id,
 	rxq->sw_p = 0;
 	rxq->sw_c = 0;
 	rxq->hw_p = 0;
+	rxq->hw_c = 0;
 	rxq->hw_producer = (uint32_t *)((uint8_t *)rdma_dev->regs_vbase + RDMA_TXRING_PRODUCER);
 	rxq->hw_consumer = (uint32_t *)((uint8_t *)rdma_dev->regs_vbase + RDMA_TXRING_CONSUMER);
 	RDMA_REG_WR32(0, rxq->hw_producer);
