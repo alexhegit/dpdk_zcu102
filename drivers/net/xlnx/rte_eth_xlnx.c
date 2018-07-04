@@ -120,7 +120,7 @@ static __rte_unused int
 eth_xlnx_disable_rx_queue(struct rdma_dev *rdma_dev)
 {
 	uint32_t val;
-	uint32_t cnt;
+	uint32_t cnt = 10;
 
 	val = RDMA_REG_RD32((uint32_t *)((uint8_t *)rdma_dev->regs_vbase
 			+ RDMA_RX_CTRL));
@@ -158,7 +158,7 @@ static __rte_unused int
 eth_xlnx_disable_tx_queue(struct rdma_dev *rdma_dev)
 {
 	uint32_t val;
-	uint32_t cnt;
+	uint32_t cnt = 10;
 
 	val = RDMA_REG_RD32((uint32_t *)((uint8_t *)rdma_dev->regs_vbase
 			+ RDMA_TX_CTRL));
