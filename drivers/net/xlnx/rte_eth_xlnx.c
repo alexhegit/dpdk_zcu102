@@ -53,6 +53,17 @@ xlnx_net_init_log(void)
 		rte_log_set_level(xlnx_net_logtype_driver, RTE_LOG_NOTICE);
 }
 
+static inline void
+rdma_reg_write(void *regs_vbase, uint32_t offset, uint32_t value)
+{
+	RDMA_REG_WR32(value, (uint32_t *)((uint8_t *)regs_vbase + offset));
+}
+
+static inline uint32_t
+rdma_reg_read(void *regs_vbase, uint32_t offset)
+{
+	return RDMA_REG_RD32((uint32_t *)((uint8_t *)regs_vbase + offset));
+}
 
 static uint16_t
 eth_xlnx_rx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
@@ -110,9 +121,9 @@ eth_xlnx_tx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 static inline void
 eth_xlnx_reset_rdma(struct rdma_dev *rdma_dev)
 {
-	RDMA_REG_WR32(0x0, (uint32_t *)((uint8_t *)rdma_dev->regs_vbase + 0xC0));
+	rdma_reg_write(rdma_dev->regs_vbase, 0xC0, 0x0);
 	usleep(100);
-	RDMA_REG_WR32(0x2, (uint32_t *)((uint8_t *)rdma_dev->regs_vbase + 0xC0));
+	rdma_reg_write(rdma_dev->regs_vbase, 0xC0, 0x2);
 	usleep(100);
 }
 
@@ -122,16 +133,13 @@ eth_xlnx_disable_rx_queue(struct rdma_dev *rdma_dev)
 	uint32_t val;
 	uint32_t cnt = 10;
 
-	val = RDMA_REG_RD32((uint32_t *)((uint8_t *)rdma_dev->regs_vbase
-			+ RDMA_RX_CTRL));
-	RDMA_REG_WR32(val & ~RDMA_RX_CTRL_RXEN,
-		(uint32_t *)((uint8_t *)rdma_dev->regs_vbase + RDMA_RX_CTRL));
+	val = rdma_reg_read(rdma_dev->regs_vbase, RDMA_RX_CTRL);
+	rdma_reg_write(rdma_dev->regs_vbase,
+		RDMA_RX_CTRL, val & ~RDMA_RX_CTRL_RXEN);
 
 	/* hardware may need about 100us */
 	do {
-		val = RDMA_REG_RD32(
-			(uint32_t *)((uint8_t *)rdma_dev->regs_vbase
-			+ RDMA_RX_CTRL));
+		val = rdma_reg_read(rdma_dev->regs_vbase, RDMA_RX_CTRL);
 		usleep(10);
 	} while (--cnt && (val & RDMA_RX_CTRL_RXEN));
 	if (!cnt) {
@@ -146,10 +154,9 @@ static __rte_unused int
 eth_xlnx_enable_rx_queue(struct rdma_dev *rdma_dev)
 {
 	uint32_t val;
-	val = RDMA_REG_RD32((uint32_t *)((uint8_t *)rdma_dev->regs_vbase
-			+ RDMA_RX_CTRL));
-	RDMA_REG_WR32(val | RDMA_RX_CTRL_RXEN,
-		(uint32_t *)((uint8_t *)rdma_dev->regs_vbase + RDMA_RX_CTRL));
+	val = rdma_reg_read(rdma_dev->regs_vbase, RDMA_RX_CTRL);
+	rdma_reg_write(rdma_dev->regs_vbase,
+		RDMA_RX_CTRL, val | RDMA_RX_CTRL_RXEN);
 
 	return 0;
 }
@@ -160,16 +167,13 @@ eth_xlnx_disable_tx_queue(struct rdma_dev *rdma_dev)
 	uint32_t val;
 	uint32_t cnt = 10;
 
-	val = RDMA_REG_RD32((uint32_t *)((uint8_t *)rdma_dev->regs_vbase
-			+ RDMA_TX_CTRL));
-	RDMA_REG_WR32(val & ~RDMA_TX_CTRL_TXEN,
-		(uint32_t *)((uint8_t *)rdma_dev->regs_vbase + RDMA_TX_CTRL));
+	val = rdma_reg_read(rdma_dev->regs_vbase, RDMA_TX_CTRL);
+	rdma_reg_write(rdma_dev->regs_vbase,
+		RDMA_TX_CTRL, val & ~RDMA_TX_CTRL_TXEN);
 
 	/* hardware may need about 100us */
 	do {
-		val = RDMA_REG_RD32(
-			(uint32_t *)((uint8_t *)rdma_dev->regs_vbase
-			+ RDMA_TX_CTRL));
+		val = rdma_reg_read(rdma_dev->regs_vbase, RDMA_TX_CTRL);
 		usleep(10);
 	} while (--cnt && (val & RDMA_TX_CTRL_TXEN));
 	if (!cnt) {
@@ -184,10 +188,9 @@ static __rte_unused int
 eth_xlnx_enable_tx_queue(struct rdma_dev *rdma_dev)
 {
 	uint32_t val;
-	val = RDMA_REG_RD32((uint32_t *)((uint8_t *)rdma_dev->regs_vbase
-			+ RDMA_TX_CTRL));
-	RDMA_REG_WR32(val | RDMA_TX_CTRL_TXEN,
-		(uint32_t *)((uint8_t *)rdma_dev->regs_vbase + RDMA_TX_CTRL));
+	val = rdma_reg_read(rdma_dev->regs_vbase, RDMA_TX_CTRL);
+	rdma_reg_write(rdma_dev->regs_vbase,
+		RDMA_TX_CTRL, val | RDMA_TX_CTRL_TXEN);
 
 	return 0;
 }
