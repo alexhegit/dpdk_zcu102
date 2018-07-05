@@ -308,7 +308,10 @@ eth_rx_queue_setup(struct rte_eth_dev *dev, uint16_t rx_queue_id,
 {
 	struct rdma_dev *rdma_dev;
 	struct rdma_queue *rxq;
+	struct rte_mbuf *mbuf;
+	union rdma_rx_desc *rdesc;
 	uint32_t min_size;
+	int i;
 	int ret;
 
 	xlnx_log_info();
@@ -367,6 +370,15 @@ eth_rx_queue_setup(struct rte_eth_dev *dev, uint16_t rx_queue_id,
 	if (unlikely(ret)) {
 		RTE_LOG(ERR, PMD, "failed to alloc mem for rx mbuf info\n");
 		goto enomem;
+	}
+
+	/* Fill the PD ring */
+	rdesc = (union rdma_rx_desc *)rxq->ring_vaddr;
+	for (i = 0; i < nb_rx_desc; i++)
+	{
+		mbuf = rxq->mbufs_info[i];
+		rdesc->read.pkt_addr = mbuf->buf_iova;
+		rdesc->read.pkt_size = XLNX_MAX_PKT_SIZE;
 	}
 
 	rxq->rdma_dev = rdma_dev;
