@@ -66,31 +66,75 @@ rdma_reg_read(void *regs_vbase, uint32_t offset)
 }
 
 static uint16_t
+eth_xlnx_rx_mbuf_supplement(struct rdma_queue *rxq, uint16_t nb_bufs)
+{
+	struct rte_mbuf **bufs;
+	int i;
+
+	bufs = rxq->mbufs_info;
+	for (i = 0; i < nb_bufs; i++)
+	{
+		bufs[rxq->sw_p] = rte_pktmbuf_alloc(rxq->mb_pool);
+		rxq->sw_p++;
+		/* ring back from end to start */
+		if (rxq->sw_p == rxq->ring_size)
+			rxq->sw_p = 0;
+	}
+
+	return nb_bufs;
+}
+
+static uint16_t
 eth_xlnx_rx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 {
-	int i;
-	struct rdma_queue *h = q;
+	struct rdma_queue *rxq = q;
+	uint32_t cur_mbuf_num; /* Number of pkts received in HW */
+	uint32_t ret_mbuf_num; /* Number of pkts returned */
+	uint32_t i;
 
 	xlnx_log_dbg("%s\n", __func__);
 
 	if ((q == NULL) || (bufs == NULL))
 		return 0;
 
-	for (i = 0; i < nb_bufs; i++) {
-		bufs[i] = rte_pktmbuf_alloc(h->mb_pool);
-		if (!bufs[i])
-			break;
+	rxq->hw_p = RDMA_REG_RD32(rxq->hw_producer);
+	rxq->hw_c = RDMA_REG_RD32(rxq->hw_consumer);
+
+	/* empty rx ring */
+	if (rxq->sw_c == rxq->hw_c)
+		return 0;
+
+	/* Count the pkts received already */
+	if (rxq->sw_c > rxq->hw_c)
+		cur_mbuf_num = rxq->hw_c + rxq->ring_size - rxq->sw_c;
+	else
+		cur_mbuf_num = rxq->hw_c - rxq->sw_c;
+
+	/* Count how many pkts can be returned */
+	if (cur_mbuf_num >= nb_bufs)
+		ret_mbuf_num = nb_bufs;
+	else
+		ret_mbuf_num = cur_mbuf_num;
+
+	for (i = 0; i < ret_mbuf_num; i++)
+	{
+		bufs[i] = rxq->mbufs_info[rxq->sw_c];
 		/* TODO:
-		 * put bufs to DMA HW to receive data
+		 * Need to get the length from HW
+		 * Now just return the max pkt size
 		 */
-		/*
-		bufs[i]->data_len =
-		bufs[i]->pkt_len =
-		*/
-		bufs[i]->port = h->rdma_dev->port_id;
+		bufs[i]->data_len = XLNX_MAX_PKT_SIZE;
+		bufs[i]->pkt_len = XLNX_MAX_PKT_SIZE;
+		bufs[i]->port = rxq->rdma_dev->port_id;
+		rxq->sw_c++;
+		/* ring back from end to start */
+		if (rxq->sw_c == rxq->ring_size)
+			rxq->sw_c = 0;
 	}
 
-	rte_atomic64_add(&(h->rx_pkts), i);
+	eth_xlnx_rx_mbuf_supplement(rxq, ret_mbuf_num);
+
+	rte_atomic64_add(&(rxq->rx_pkts), ret_mbuf_num);
 
 	return i;
 }
