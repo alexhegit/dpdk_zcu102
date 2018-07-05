@@ -703,7 +703,7 @@ xlnx_regs_mmap(struct rdma_dev *rdma_dev)
 }
 
 static int
-eth_dev_xlnx_create(struct rte_vdev_device *dev, uint64_t regs_pbase)
+eth_xlnx_dev_create(struct rte_vdev_device *dev, uint64_t regs_pbase)
 {
 	const unsigned nb_rx_queues = 1;
 	const unsigned nb_tx_queues = 1;
@@ -810,7 +810,7 @@ rte_pmd_xlnx_probe(struct rte_vdev_device *dev)
 
 	RTE_LOG(INFO, PMD, "Configure pmd_xlnx, regs_pbase=%lu\n", regs_pbase);
 
-	ret = eth_dev_xlnx_create(dev, regs_pbase);
+	ret = eth_xlnx_dev_create(dev, regs_pbase);
 
 free_kvlist:
 	if (kvlist)
