@@ -101,8 +101,10 @@ eth_xlnx_rx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 	rxq->hw_c = RDMA_REG_RD32(rxq->hw_consumer);
 
 	/* empty rx ring */
-	if (rxq->sw_c == rxq->hw_c)
+	if ((rxq->in_use == 0) && (rxq->sw_c == rxq->hw_c))
 		return 0;
+
+	rxq->in_use = 1;
 
 	/* Count the pkts received already */
 	if (rxq->sw_c > rxq->hw_c)
