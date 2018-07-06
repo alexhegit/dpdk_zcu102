@@ -141,25 +141,94 @@ eth_xlnx_rx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 	return i;
 }
 
+static void
+eth_xlnx_tx_mbuf_free(struct rdma_queue *txq)
+{
+	uint32_t cur;
+	uint32_t nb_bufs;
+	uint32_t i;
+	struct rte_mbuf **bufs;
+
+	/* Do not free at first time */
+	if (txq->in_use == 0)
+		return;
+
+	txq->sw_c = txq->hw_c;
+	bufs = txq->mbufs_info;
+
+	if (txq->sw_c < txq->sw_p)
+		nb_bufs = txq->ring_size - txq->sw_p + txq->sw_c;
+	else
+		nb_bufs = txq->sw_c - txq->sw_p;
+
+	cur = txq->sw_p;
+	for(i = 0; i < nb_bufs; i++)
+	{
+		rte_pktmbuf_free(bufs[cur]);
+		cur = (cur + 1) % txq->ring_size;
+	}
+	txq->sw_p = cur;
+}
+
 static uint16_t
 eth_xlnx_tx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 {
-	int i;
-	struct rdma_queue *h = q;
+	struct rdma_queue *txq = q;
+	union rdma_tx_desc *tx_desc;
+	uint32_t send_mbuf_num; /* Number of pkts can sent to HW */
+	uint32_t unused_pd_num;
+	uint32_t hw_p;
+	uint32_t i;
 
 	xlnx_log_dbg("%s\n", __func__);
 
 	if ((q == NULL) || (bufs == NULL))
 		return 0;
 
-	/* TODO:
-	 * put bufs to DMA HW
+	txq->hw_p = RDMA_REG_RD32(txq->hw_producer);
+	txq->hw_c = RDMA_REG_RD32(txq->hw_consumer);
+
+	/* Count the number of unused PD */
+	if (txq->in_use == 0)
+		unused_pd_num = txq->ring_size;
+	else {
+		if (txq->hw_p > txq->sw_p)
+			unused_pd_num = txq->ring_size - txq->hw_p + txq->sw_p;
+		else
+			unused_pd_num = txq->hw_p - txq->sw_p;
+
+	}
+
+	/* PD ring is full, can not send pkt more */
+	if (unused_pd_num == 0)
+		return 0;
+
+	if (unused_pd_num < nb_bufs)
+		send_mbuf_num = unused_pd_num;
+	else
+		send_mbuf_num = nb_bufs;
+
+	/*
+	 * Put bufs to DMA TX ring
+	 * and update mbufs_info
 	 */
+	hw_p = txq->hw_p;
+	for (i = 0; i < send_mbuf_num; i++) {
+		tx_desc = (union rdma_tx_desc *)txq->ring_vaddr + hw_p;
+		txq->mbufs_info[hw_p] = bufs[i];
+		tx_desc->read.pkt_addr = rte_mbuf_data_iova(bufs[i]);
+		tx_desc->read.pkt_size = rte_pktmbuf_data_len(bufs[i]);
+		tx_desc->read.seop.sop = 0x1;
+		tx_desc->read.seop.eop = 0x1;
+		tx_desc->read.rsvd3 = 0x1;
+		hw_p = (hw_p + 1) % txq->ring_size;
+	}
+	RDMA_REG_WR32(hw_p, txq->hw_producer);
 
-	for (i = 0; i < nb_bufs; i++)
-		rte_pktmbuf_free(bufs[i]);
+	eth_xlnx_tx_mbuf_free(txq);
 
-	rte_atomic64_add(&(h->tx_pkts), i);
+	rte_atomic64_add(&(txq->tx_pkts), send_mbuf_num);
+	txq->in_use = 1;
 
 	return i;
 }
