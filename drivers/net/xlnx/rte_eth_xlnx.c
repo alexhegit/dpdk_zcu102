@@ -69,12 +69,16 @@ static uint16_t
 eth_xlnx_rx_mbuf_supplement(struct rdma_queue *rxq, uint16_t nb_bufs)
 {
 	struct rte_mbuf **bufs;
+	union rdma_rx_desc *rdesc;
 	int i;
 
 	bufs = rxq->mbufs_info;
+	rdesc = (union rdma_rx_desc *)rxq->ring_vaddr + rxq->sw_p;
 	for (i = 0; i < nb_bufs; i++)
 	{
 		bufs[rxq->sw_p] = rte_pktmbuf_alloc(rxq->mb_pool);
+		rdesc->read.pkt_addr = bufs[rxq->sw_p]->buf_iova;
+		rdesc->read.pkt_size = XLNX_MAX_PKT_SIZE;
 		rxq->sw_p++;
 		/* ring back from end to start */
 		if (rxq->sw_p == rxq->ring_size)
