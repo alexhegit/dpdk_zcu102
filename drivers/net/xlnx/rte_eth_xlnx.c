@@ -414,7 +414,8 @@ eth_rx_queue_setup(struct rte_eth_dev *dev, uint16_t rx_queue_id,
 	min_size = rte_pktmbuf_data_room_size(mb_pool) - RTE_PKTMBUF_HEADROOM;
 	if (min_size < XLNX_MAX_PKT_SIZE) {
 		RTE_LOG(ERR, PMD,
-			"Mbuf size must be increased to %u bytes to hold up to %u bytes of data.\n",
+			"Mbuf size(=%d, now) must be increased to %u bytes to hold up to %u bytes of data.\n",
+			min_size,
 			XLNX_MAX_PKT_SIZE + RTE_PKTMBUF_HEADROOM,
 			XLNX_MAX_PKT_SIZE);
 		return -EINVAL;
