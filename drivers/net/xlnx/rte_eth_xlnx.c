@@ -442,10 +442,18 @@ eth_rx_queue_setup(struct rte_eth_dev *dev, uint16_t rx_queue_id,
 	}
 	rxq->status_paddr = rte_mem_virt2phy(rxq->status_vaddr);
 
+	rxq->mbufs_info = rte_zmalloc("rxq->mbufs_info",
+			sizeof(struct rte_mbuf *) * nb_rx_desc,
+			RTE_CACHE_LINE_SIZE);
+	if (!rxq->mbufs_info) {
+		RTE_LOG(ERR, PMD, "failed to alloc mem for rx mbuf info\n");
+		goto enomem1;
+	}
+
 	ret = rte_pktmbuf_alloc_bulk(mb_pool, rxq->mbufs_info, nb_rx_desc);
 	if (unlikely(ret)) {
 		RTE_LOG(ERR, PMD, "failed to alloc mem for rx mbuf info\n");
-		goto enomem;
+		goto enomem2;
 	}
 
 	/* Fill the PD ring */
@@ -498,7 +506,9 @@ eth_rx_queue_setup(struct rte_eth_dev *dev, uint16_t rx_queue_id,
 	rxq->configured = 1;
 	return 0;
 
-enomem:
+enomem2:
+	rte_free(rxq->mbufs_info);
+enomem1:
 	rte_free(rxq->status_vaddr);
 free_ring:
 	rte_free(rxq->ring_vaddr);
@@ -723,6 +733,7 @@ eth_rx_queue_release(void *q)
 	rte_free(rxq->status_vaddr);
 	for (i = 0; i < rxq->ring_size; i++)
 		rte_pktmbuf_free(rxq->mbufs_info[i]);
+	rte_free(rxq->mbufs_info);
 }
 
 static void
