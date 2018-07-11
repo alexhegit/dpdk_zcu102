@@ -65,6 +65,7 @@ struct rdma_queue {
 	struct rte_mbuf ** mbufs_info;
 	void * ring_vaddr;
 	phys_addr_t ring_paddr;
+	void * ring_vend;
 	void * status_vaddr;
 	phys_addr_t status_paddr;
 

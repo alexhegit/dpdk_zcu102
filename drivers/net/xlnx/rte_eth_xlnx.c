@@ -65,6 +65,18 @@ rdma_reg_read(void *regs_vbase, uint32_t offset)
 	return RDMA_REG_RD32((uint32_t *)((uint8_t *)regs_vbase + offset));
 }
 
+static void
+rdma_flash_ring(struct rdma_queue *q)
+{
+	uint64_t start, stop;
+
+	start = (uint64_t)q->ring_vaddr;
+	stop = (uint64_t)q->ring_vend;
+
+	invalidate_dcache_range(start, stop);
+}
+
+
 static uint16_t
 eth_xlnx_rx_mbuf_supplement(struct rdma_queue *rxq, uint16_t nb_bufs)
 {
@@ -139,6 +151,7 @@ eth_xlnx_rx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 	}
 
 	eth_xlnx_rx_mbuf_supplement(rxq, ret_mbuf_num);
+	rdma_flash_ring(rxq);
 
 	rte_atomic64_add(&(rxq->rx_pkts), ret_mbuf_num);
 
@@ -227,6 +240,7 @@ eth_xlnx_tx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 		tx_desc->read.rsvd3 = 0x1;
 		hw_p = (hw_p + 1) % txq->ring_size;
 	}
+	rdma_flash_ring(txq);
 	RDMA_REG_WR32(hw_p, txq->hw_producer);
 
 	eth_xlnx_tx_mbuf_free(txq);
@@ -436,6 +450,7 @@ eth_rx_queue_setup(struct rte_eth_dev *dev, uint16_t rx_queue_id,
 		return -ENOMEM;
 	}
 	rxq->ring_paddr = rte_mem_virt2phy(rxq->ring_vaddr);
+	rxq->ring_vend = (char *)rxq->ring_vaddr + sizeof(union rdma_rx_desc) * nb_rx_desc;
 
 	rxq->status_vaddr = rte_zmalloc("rxq->status_vaddr",
 			XLNX_QUEUE_STATUS_MSIZE, RTE_CACHE_LINE_SIZE);
@@ -468,6 +483,7 @@ eth_rx_queue_setup(struct rte_eth_dev *dev, uint16_t rx_queue_id,
 		rdesc->read.pkt_addr = mbuf->buf_iova;
 		rdesc->read.pkt_size = XLNX_MAX_PKT_SIZE;
 	}
+	rdma_flash_ring(rxq);
 
 	rxq->rdma_dev = rdma_dev;
 	rxq->mb_pool = mb_pool;
@@ -573,6 +589,7 @@ eth_tx_queue_setup(struct rte_eth_dev *dev, uint16_t tx_queue_id,
 		return -ENOMEM;
 	}
 	txq->ring_paddr = rte_mem_virt2phy(txq->ring_vaddr);
+	txq->ring_vend = (char *)txq->ring_vaddr + sizeof(union rdma_tx_desc) * nb_tx_desc;
 
 	txq->status_vaddr = rte_zmalloc("txq->status_vaddr",
 			XLNX_QUEUE_STATUS_MSIZE, RTE_CACHE_LINE_SIZE);
