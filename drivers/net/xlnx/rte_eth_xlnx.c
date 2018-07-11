@@ -349,7 +349,11 @@ eth_dev_start(struct rte_eth_dev *dev)
 	rdma_dev = dev->data->dev_private;
 
 	eth_xlnx_enable_tx_queue(rdma_dev);
-	eth_xlnx_enable_rx_queue(rdma_dev);
+	/* FIXME:
+	 * Keep same as kernel driver, RX path should be enable later
+	 * Move to do it in rx queue setup
+	 */
+	//eth_xlnx_enable_rx_queue(rdma_dev);
 
 	eth_xlnx_reset_rdma(rdma_dev);
 
@@ -502,6 +506,16 @@ eth_rx_queue_setup(struct rte_eth_dev *dev, uint16_t rx_queue_id,
 
 	dev->data->rx_queues[rx_queue_id] =
 		&rdma_dev->rx_queues[rx_queue_id];
+
+	/*
+	 * FIXME:
+	 *
+	 * Keep same as kernel driver, enable RX transfer at here
+	 */
+	rdma_reg_write(rdma_dev->regs_vbase, 0xC4, XLNX_MAX_PKT_SIZE);
+	eth_xlnx_enable_rx_queue(rdma_dev);
+	rxq->hw_p = rxq->ring_size - 1;
+	RDMA_REG_WR32(rxq->hw_p, rxq->hw_producer);
 
 	rxq->configured = 1;
 	return 0;
