@@ -1,0 +1,8 @@
+./xlnx_basicfwd -l 1 -n 4 --vdev 'net_ring0' -- -p <number of packets> -m <mode>
+
+Mode: mode 0 is the loopback mode 
+In this mode : send n number of packets and receive them back
+
+Mode 1 is the txonly mode 
+Mode 2 is the rxonly mode
+
