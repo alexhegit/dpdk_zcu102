@@ -102,5 +102,23 @@ struct rdma_dev {
 	rte_spinlock_t reg_lock;
 };
 
+#define CONFIG_RTE_CACHE_LINE_SIZE 128
+static inline void
+invalidate_dcache_range(uint64_t start, uint64_t stop)
+{
+	uint32_t cache_line_size = CONFIG_RTE_CACHE_LINE_SIZE;
+
+	__asm__ __volatile__ (
+			"sub     x2, %[cls], #1\n\t"
+			"bic     %[input_start], %[input_start], x2\n\t"
+			"1:\n\t"
+			"dc      civac, %[input_start]\n\t"
+			"add     %[input_start], %[input_start], %[cls]\n\t"
+			"cmp     %[input_start], %[input_stop]\n\t"
+			"b.lo    1b\n\t"
+			"dsb     sy\n\t"
+			: /*This is an empty output operand list */
+			: [input_start] "r" (start), [input_stop] "r" (stop), [cls] "r" (cache_line_size));
+}
 
 #endif /* __XLNX_RDMA_H__*/
