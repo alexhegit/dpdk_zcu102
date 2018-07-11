@@ -85,10 +85,10 @@ eth_xlnx_rx_mbuf_supplement(struct rdma_queue *rxq, uint16_t nb_bufs)
 	int i;
 
 	bufs = rxq->mbufs_info;
-	rdesc = (union rdma_rx_desc *)rxq->ring_vaddr + rxq->sw_p;
 	for (i = 0; i < nb_bufs; i++)
 	{
 		bufs[rxq->sw_p] = rte_pktmbuf_alloc(rxq->mb_pool);
+		rdesc = (union rdma_rx_desc *)rxq->ring_vaddr + rxq->sw_p;
 		rdesc->read.pkt_addr = bufs[rxq->sw_p]->buf_iova;
 		rdesc->read.pkt_size = XLNX_MAX_PKT_SIZE;
 		rxq->sw_p++;
@@ -482,6 +482,7 @@ eth_rx_queue_setup(struct rte_eth_dev *dev, uint16_t rx_queue_id,
 		mbuf = rxq->mbufs_info[i];
 		rdesc->read.pkt_addr = mbuf->buf_iova;
 		rdesc->read.pkt_size = XLNX_MAX_PKT_SIZE;
+		rdesc++;
 	}
 	rdma_flash_ring(rxq);
 
