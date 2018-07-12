@@ -187,7 +187,6 @@ static __attribute__(())
         data = rte_pktmbuf_mtod(txpkt, struct message *);
         if (data != NULL)
                 rte_memcpy(data, msg, sizeof(struct message));
-        printf ("number of packets = %d \n",num_pkts);
         for (nb_pkt=1; nb_pkt <= num_pkts; nb_pkt++){
                 nb_tx = rte_eth_tx_burst(0 , 0, &txpkt, nb_pkt);
                 nb_rx = rte_eth_rx_burst(0 , 0, &rxpkt, nb_pkt);
@@ -231,7 +230,6 @@ static __attribute__(())
         data = rte_pktmbuf_mtod(txpkt, struct message *);
         if (data != NULL)
     	        rte_memcpy(data, msg, sizeof(struct message));
-        printf ("number of packets = %d \n",num_pkts);
         for (nb_pkt=1; nb_pkt <= num_pkts; nb_pkt++) {
                 nb_tx = rte_eth_tx_burst(0 , 0, &txpkt, nb_pkt);
                 rte_pktmbuf_dump(stdout, txpkt, 1024);
@@ -294,7 +292,6 @@ xlnx_parse_mode(const char *q_arg)
 
         /* parse number string */
         m = strtol(q_arg, &end, 10);
-        printf ("= %d \n",m);
         if ((q_arg[0] == '\0') || (end == NULL) || (*end != '\0'))
                 return -1;
         return m;
@@ -311,15 +308,13 @@ xlnx_parse_args(int argc, char **argv)
         argvopt = argv;
         while ((opt = getopt_long(argc, argvopt, short_options,
                                 0 , &option_index)) != EOF) {
-            printf ("opt = %d \n", opt);
             switch (opt) {
         /* Num of packets */
                 case 'p':
                     num_pkts=xlnx_parse_numpkts(optarg);
                     printf ("num_pkts = %d \n", num_pkts);
                     if (num_pkts == 0) {
-                        printf ("exiting here \n");
-                    return -1;
+                            return -1;
                     }
                 break;
                /* Mode */
@@ -327,8 +322,8 @@ xlnx_parse_args(int argc, char **argv)
                         mode=xlnx_parse_mode(optarg);
                         printf ("mode = %d \n", mode);
                         if (mode > 3) {
-                            printf ("invalid mode \n");
-                         return -1;
+                                printf ("invalid mode \n");
+                                return -1;
                          }
 
                   break;
@@ -363,7 +358,6 @@ main(int argc, char *argv[])
 
         argc -= ret;
         argv += ret;
-        printf ("argc = %d \n", argc);
        /* parse application arguments (after the EAL ones) */
         ret = xlnx_parse_args(argc, argv);
         if (ret < 0)
@@ -380,7 +374,6 @@ main(int argc, char *argv[])
                 rte_exit(EXIT_FAILURE, "Cannot create mbuf pool\n");
 
         /* Initialize all ports. */
-        printf ("nb_ports = %d \n",nb_ports);
         for (portid = 0; portid < nb_ports; portid++)
                 if (port_init(portid, mbuf_pool) != 0)
                         rte_exit(EXIT_FAILURE, "Cannot init port %"PRIu16 "\n",
@@ -389,7 +382,6 @@ main(int argc, char *argv[])
         if (rte_lcore_count() > 1)
                 printf("\nWARNING: Too many lcores enabled. Only 1 used.\n");
 
-        printf ("mode = %d \n",mode);
         /* Call lcore_main on the master core only. */
         if (mode == 0){
                 printf ("loopback mode test \n");
