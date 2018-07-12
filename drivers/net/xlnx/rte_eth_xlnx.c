@@ -19,6 +19,8 @@
 
 #define DRIVER_NAME net_xlnx
 
+#define XLNX_RDMA_MEM_ALIGN 0x1000
+
 #define XLNX_MAX_QUEUE_PER_PORT	1
 
 #define XLNX_RDMA_REGS_PBASE	"pbase"
@@ -444,7 +446,7 @@ eth_rx_queue_setup(struct rte_eth_dev *dev, uint16_t rx_queue_id,
 
 	rxq->ring_vaddr = rte_zmalloc("rxq->ring_vaddr",
 			sizeof(union rdma_rx_desc) * nb_rx_desc,
-			RTE_CACHE_LINE_SIZE);
+			XLNX_RDMA_MEM_ALIGN);
 	if (!rxq->ring_vaddr) {
 		RTE_LOG(ERR, PMD, "failed to alloc mem for rx ring\n");
 		return -ENOMEM;
@@ -453,7 +455,7 @@ eth_rx_queue_setup(struct rte_eth_dev *dev, uint16_t rx_queue_id,
 	rxq->ring_vend = (char *)rxq->ring_vaddr + sizeof(union rdma_rx_desc) * nb_rx_desc;
 
 	rxq->status_vaddr = rte_zmalloc("rxq->status_vaddr",
-			XLNX_QUEUE_STATUS_MSIZE, RTE_CACHE_LINE_SIZE);
+			XLNX_QUEUE_STATUS_MSIZE, XLNX_RDMA_MEM_ALIGN);
 	if (!rxq->status_vaddr) {
 		RTE_LOG(ERR, PMD, "failed to alloc mem for rx queue status\n");
 		ret = -ENOMEM;
@@ -463,7 +465,7 @@ eth_rx_queue_setup(struct rte_eth_dev *dev, uint16_t rx_queue_id,
 
 	rxq->mbufs_info = rte_zmalloc("rxq->mbufs_info",
 			sizeof(struct rte_mbuf *) * nb_rx_desc,
-			RTE_CACHE_LINE_SIZE);
+			XLNX_RDMA_MEM_ALIGN);
 	if (!rxq->mbufs_info) {
 		RTE_LOG(ERR, PMD, "failed to alloc mem for rx mbuf info\n");
 		goto enomem1;
@@ -584,7 +586,7 @@ eth_tx_queue_setup(struct rte_eth_dev *dev, uint16_t tx_queue_id,
 
 	txq->ring_vaddr = rte_zmalloc("txq->ring_vaddr",
 			sizeof(union rdma_tx_desc) * nb_tx_desc,
-			RTE_CACHE_LINE_SIZE);
+			XLNX_RDMA_MEM_ALIGN);
 	if (!txq->ring_vaddr) {
 		RTE_LOG(ERR, PMD, "failed to alloc mem for tx ring\n");
 		return -ENOMEM;
@@ -593,7 +595,7 @@ eth_tx_queue_setup(struct rte_eth_dev *dev, uint16_t tx_queue_id,
 	txq->ring_vend = (char *)txq->ring_vaddr + sizeof(union rdma_tx_desc) * nb_tx_desc;
 
 	txq->status_vaddr = rte_zmalloc("txq->status_vaddr",
-			XLNX_QUEUE_STATUS_MSIZE, RTE_CACHE_LINE_SIZE);
+			XLNX_QUEUE_STATUS_MSIZE, XLNX_RDMA_MEM_ALIGN);
 	if (!txq->status_vaddr) {
 		RTE_LOG(ERR, PMD, "failed to alloc mem for tx queue status\n");
 		ret = -ENOMEM;
@@ -603,7 +605,7 @@ eth_tx_queue_setup(struct rte_eth_dev *dev, uint16_t tx_queue_id,
 
 	txq->mbufs_info = rte_zmalloc("txq->mbufs_info",
 			sizeof(struct rte_mbuf *) * nb_tx_desc,
-			RTE_CACHE_LINE_SIZE);
+			XLNX_RDMA_MEM_ALIGN);
 	if (!txq->mbufs_info) {
 		RTE_LOG(ERR, PMD, "failed to alloc mem for tx mbuf info\n");
 		goto enomem;
