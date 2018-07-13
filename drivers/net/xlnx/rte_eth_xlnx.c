@@ -67,6 +67,26 @@ rdma_reg_read(void *regs_vbase, uint32_t offset)
 	return RDMA_REG_RD32((uint32_t *)((uint8_t *)regs_vbase + offset));
 }
 
+static inline void
+rdma_regs_dump(struct rdma_dev *dev)
+{
+	struct rdma_queue *rxq, *txq;
+
+	rxq = &dev->rx_queues[0];
+	txq = &dev->tx_queues[0];
+
+	txq->hw_p = RDMA_REG_RD32(txq->hw_producer);
+	txq->hw_c = RDMA_REG_RD32(txq->hw_consumer);
+
+	rxq->hw_p = RDMA_REG_RD32(rxq->hw_producer);
+	rxq->hw_c = RDMA_REG_RD32(rxq->hw_consumer);
+
+	xlnx_log_dbg("TXQ: hw_p=%d, hw_c=%d, sw_p=%d, sw_c=%d\n",
+			txq->hw_p, txq->hw_c, txq->sw_p, txq->sw_c);
+	xlnx_log_dbg("RXQ: hw_p=%d, hw_c=%d, sw_p=%d, sw_c=%d\n",
+			rxq->hw_p, rxq->hw_c, rxq->sw_p, rxq->sw_c);
+}
+
 static void
 rdma_flash_ring(struct rdma_queue *q)
 {
