@@ -130,8 +130,6 @@ eth_xlnx_rx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 	uint32_t ret_mbuf_num; /* Number of pkts returned */
 	uint32_t i;
 
-	xlnx_log_dbg("%s\n", __func__);
-
 	if ((q == NULL) || (bufs == NULL))
 		return 0;
 
@@ -218,8 +216,6 @@ eth_xlnx_tx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 	uint32_t unused_pd_num;
 	uint32_t hw_p;
 	uint32_t i;
-
-	xlnx_log_dbg("%s\n", __func__);
 
 	if ((q == NULL) || (bufs == NULL))
 		return 0;
