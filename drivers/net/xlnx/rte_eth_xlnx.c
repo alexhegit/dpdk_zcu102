@@ -88,7 +88,7 @@ rdma_regs_dump(struct rdma_dev *dev)
 }
 
 static void
-rdma_flash_ring(struct rdma_queue *q)
+rdma_flush_ring(struct rdma_queue *q)
 {
 	uint64_t start, stop;
 
@@ -171,7 +171,7 @@ eth_xlnx_rx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 	}
 
 	eth_xlnx_rx_mbuf_supplement(rxq, ret_mbuf_num);
-	rdma_flash_ring(rxq);
+	rdma_flush_ring(rxq);
 
 	rte_atomic64_add(&(rxq->rx_pkts), ret_mbuf_num);
 
@@ -258,7 +258,7 @@ eth_xlnx_tx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 		tx_desc->read.rsvd3 = 0x1;
 		hw_p = (hw_p + 1) % txq->ring_size;
 	}
-	rdma_flash_ring(txq);
+	rdma_flush_ring(txq);
 	RDMA_REG_WR32(hw_p, txq->hw_producer);
 
 	eth_xlnx_tx_mbuf_free(txq);
@@ -502,7 +502,7 @@ eth_rx_queue_setup(struct rte_eth_dev *dev, uint16_t rx_queue_id,
 		rdesc->read.pkt_size = XLNX_MAX_PKT_SIZE;
 		rdesc++;
 	}
-	rdma_flash_ring(rxq);
+	rdma_flush_ring(rxq);
 
 	rxq->rdma_dev = rdma_dev;
 	rxq->mb_pool = mb_pool;
