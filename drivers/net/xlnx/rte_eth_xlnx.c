@@ -190,21 +190,20 @@ eth_xlnx_tx_mbuf_free(struct rdma_queue *txq)
 	if (txq->in_use == 0)
 		return;
 
-	txq->sw_c = txq->hw_c;
 	bufs = txq->mbufs_info;
 
-	if (txq->sw_c < txq->sw_p)
-		nb_bufs = txq->ring_size - txq->sw_p + txq->sw_c;
+	if (txq->hw_c < txq->sw_c)
+		nb_bufs = txq->ring_size - txq->sw_c + txq->hw_c;
 	else
-		nb_bufs = txq->sw_c - txq->sw_p;
+		nb_bufs = txq->hw_c - txq->sw_c;
 
-	cur = txq->sw_p;
+	cur = txq->sw_c;
 	for(i = 0; i < nb_bufs; i++)
 	{
 		rte_pktmbuf_free(bufs[cur]);
 		cur = (cur + 1) % txq->ring_size;
 	}
-	txq->sw_p = cur;
+	txq->sw_c = cur;
 }
 
 static uint16_t
@@ -227,16 +226,18 @@ eth_xlnx_tx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 	if (txq->in_use == 0)
 		unused_pd_num = txq->ring_size;
 	else {
-		if (txq->hw_p > txq->sw_p)
-			unused_pd_num = txq->ring_size - txq->hw_p + txq->sw_p;
+		if (txq->hw_p > txq->sw_c)
+			unused_pd_num = txq->ring_size - txq->hw_p + txq->sw_c;
 		else
-			unused_pd_num = txq->hw_p - txq->sw_p;
+			unused_pd_num = txq->sw_c - txq->hw_p;
 
 	}
 
 	/* PD ring is full, can not send pkt more */
-	if (unused_pd_num == 0)
+	if (unused_pd_num == 0) {
+		eth_xlnx_tx_mbuf_free(txq);
 		return 0;
+	}
 
 	if (unused_pd_num < nb_bufs)
 		send_mbuf_num = unused_pd_num;
