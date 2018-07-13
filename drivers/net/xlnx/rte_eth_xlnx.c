@@ -93,11 +93,11 @@ eth_xlnx_rx_mbuf_supplement(struct rdma_queue *rxq, uint16_t nb_bufs)
 		rdesc = (union rdma_rx_desc *)rxq->ring_vaddr + rxq->sw_p;
 		rdesc->read.pkt_addr = bufs[rxq->sw_p]->buf_iova;
 		rdesc->read.pkt_size = XLNX_MAX_PKT_SIZE;
-		rxq->sw_p++;
-		/* ring back from end to start */
-		if (rxq->sw_p == rxq->ring_size)
-			rxq->sw_p = 0;
+		rxq->sw_p = (rxq->sw_p + 1) % rxq->ring_size;
+		rxq->hw_p = (rxq->sw_p + 1) % rxq->ring_size;
 	}
+
+	RDMA_REG_WR32(rxq->hw_p, rxq->hw_producer);
 
 	return nb_bufs;
 }
