@@ -161,10 +161,7 @@ eth_xlnx_rx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 	rxq->in_use = 1;
 
 	/* Count the pkts received already */
-	if (rxq->sw_c > rxq->hw_c)
-		cur_mbuf_num = rxq->hw_c + rxq->ring_size - rxq->sw_c;
-	else
-		cur_mbuf_num = rxq->hw_c - rxq->sw_c;
+	cur_mbuf_num = count_space(rxq->sw_c, rxq->hw_c, rxq->ring_size);
 
 	/* Count how many pkts can be returned */
 	if (cur_mbuf_num >= nb_bufs)
