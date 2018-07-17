@@ -208,6 +208,7 @@ eth_xlnx_tx_mbuf_free(struct rdma_queue *txq)
 	if (txq->in_use == 0)
 		return;
 
+	txq->hw_c = RDMA_REG_RD32(txq->hw_consumer);
 	bufs = txq->mbufs_info;
 
 	nb_bufs = count_space(txq->sw_c, txq->hw_c, txq->ring_size);
@@ -235,7 +236,6 @@ eth_xlnx_tx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 		return 0;
 
 	txq->hw_p = RDMA_REG_RD32(txq->hw_producer);
-	txq->hw_c = RDMA_REG_RD32(txq->hw_consumer);
 
 	/* Count the number of unused PD */
 	if (txq->in_use == 0)
