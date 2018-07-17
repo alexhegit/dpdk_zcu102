@@ -98,6 +98,24 @@ rdma_flush_ring(struct rdma_queue *q)
 	invalidate_dcache_range(start, stop);
 }
 
+/*
+ * Count space from tail to head in the ring
+ *
+ * ret = num of [tail, head)
+ */
+static inline uint32_t
+count_space(uint32_t tail, uint32_t head, uint32_t ring_size)
+{
+	uint32_t ret;
+
+	if (head >= tail)
+		ret = head - tail;
+	else
+		ret = ring_size - tail + head;
+
+	return ret;
+}
+
 
 static uint16_t
 eth_xlnx_rx_mbuf_supplement(struct rdma_queue *rxq, uint16_t nb_bufs)
@@ -192,10 +210,7 @@ eth_xlnx_tx_mbuf_free(struct rdma_queue *txq)
 
 	bufs = txq->mbufs_info;
 
-	if (txq->hw_c < txq->sw_c)
-		nb_bufs = txq->ring_size - txq->sw_c + txq->hw_c;
-	else
-		nb_bufs = txq->hw_c - txq->sw_c;
+	nb_bufs = count_space(txq->sw_c, txq->hw_c, txq->ring_size);
 
 	cur = txq->sw_c;
 	for(i = 0; i < nb_bufs; i++)
@@ -225,13 +240,8 @@ eth_xlnx_tx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 	/* Count the number of unused PD */
 	if (txq->in_use == 0)
 		unused_pd_num = txq->ring_size;
-	else {
-		if (txq->hw_p > txq->sw_c)
-			unused_pd_num = txq->ring_size - txq->hw_p + txq->sw_c;
-		else
-			unused_pd_num = txq->sw_c - txq->hw_p;
-
-	}
+	else
+		unused_pd_num = count_space(txq->hw_p, txq->sw_c, txq->ring_size);
 
 	/* PD ring is full, can not send pkt more */
 	if (unused_pd_num == 0) {
