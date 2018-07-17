@@ -245,6 +245,7 @@ eth_xlnx_tx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 
 	/* PD ring is full, can not send pkt more */
 	if (unused_pd_num == 0) {
+		xlnx_log_info("PD ring is full\n");
 		eth_xlnx_tx_mbuf_free(txq);
 		return 0;
 	}
