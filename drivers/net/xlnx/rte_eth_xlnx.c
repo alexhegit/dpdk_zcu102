@@ -155,10 +155,8 @@ eth_xlnx_rx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 	rxq->hw_c = RDMA_REG_RD32(rxq->hw_consumer);
 
 	/* empty rx ring */
-	if ((rxq->in_use == 0) && (rxq->sw_c == rxq->hw_c))
+	if (rxq->sw_c == rxq->hw_c)
 		return 0;
-
-	rxq->in_use = 1;
 
 	/* Count the pkts received already */
 	cur_mbuf_num = count_space(rxq->sw_c, rxq->hw_c, rxq->ring_size);
@@ -520,7 +518,6 @@ eth_rx_queue_setup(struct rte_eth_dev *dev, uint16_t rx_queue_id,
 	rxq->sw_c = 0;
 	rxq->hw_p = 0;
 	rxq->hw_c = 0;
-	rxq->in_use = 0;
 	rxq->hw_producer = (uint32_t *)((uint8_t *)rdma_dev->regs_vbase + RDMA_RXRING_PRODUCER);
 	rxq->hw_consumer = (uint32_t *)((uint8_t *)rdma_dev->regs_vbase + RDMA_RXRING_CONSUMER);
 
