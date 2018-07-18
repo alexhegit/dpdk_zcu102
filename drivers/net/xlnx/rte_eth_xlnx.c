@@ -194,7 +194,6 @@ eth_xlnx_rx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 static void
 eth_xlnx_tx_mbuf_free(struct rdma_queue *txq)
 {
-	uint32_t cur;
 	uint32_t nb_bufs;
 	uint32_t i;
 	struct rte_mbuf **bufs;
@@ -208,13 +207,11 @@ eth_xlnx_tx_mbuf_free(struct rdma_queue *txq)
 
 	nb_bufs = count_space(txq->sw_c, txq->hw_c, txq->ring_size);
 
-	cur = txq->sw_c;
 	for(i = 0; i < nb_bufs; i++)
 	{
-		rte_pktmbuf_free(bufs[cur]);
-		cur = (cur + 1) % txq->ring_size;
+		rte_pktmbuf_free(bufs[txq->sw_c]);
+		txq->sw_c = (txq->sw_c + 1) % txq->ring_size;
 	}
-	txq->sw_c = cur;
 }
 
 static uint16_t
