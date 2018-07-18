@@ -1,0 +1,80 @@
+Xilinx RDMA PMD
+
+version: 0.0.3
+Date: 07/18/2018
+
+DPDK version: 18.02
+Compile tools: petalinux v2017.4/gcc version 6.2.1 20161114 (Linaro GCC Snapshot 6.2-2016.11)
+
+
+=========
+Code tree
+=========
+
+drivers/net/xlnx/
+\u251c\u2500\u2500 Makefile
+\u251c\u2500\u2500 meson.build
+\u251c\u2500\u2500 rte_eth_xlnx.c
+\u251c\u2500\u2500 rte_pmd_xlnx_version.map
+\u251c\u2500\u2500 xlnx_logs.h
+\u251c\u2500\u2500 xlnx_rdma.h
+\u2514\u2500\u2500 xlnx_rdma_reg.h
+
+0 directories, 7 files
+
+
+
+=========
+Compile
+=========
+
+Prepare the cross compile tool chain (petalinux v2017.4)
+	$source <petalinux install root>/setup.sh
+
+
+Configure DPDK for ARM64
+	$export CROSS=aarch64-linux-gnu-
+	$export ARCH=arm64
+	$make config T=arm64-armv8a-plnxapp-gcc O=plnxapp
+
+
+Compiling for Debug[optioin]
+	$export EXTRA_CFLAGS='-O0 -g'
+
+
+Cross-compile the Linux kernel, use the variable below to point to it.
+	- RTE_KERNELDIR  (kernel source root dir)
+
+
+Start Compiling
+- No NUMA
+	RTE_EAL_NUMA_AWARE_HUGEPAGES = n
+- Point kernel root dir by RTE_KERNELDIR(deceied by your real enviroment)
+e.g.
+	$make O=plnxapp RTE_KERNELDIR=/home/ahe/PLNX_WS/DPDK_ARM64/linux-xlnx -j32
+or
+	$cd plnxapp
+	$make RTE_KERNELDIR=/home/ahe/PLNX_WS/DPDK_ARM64/linux-xlnx -j32
+
+
+Install the dpdk
+$make install DESTDIR=./out
+
+
+=========
+Test
+=========
+Copy the testpmd to your board, then do test.
+
+e.g.
+$testpmd -l 1-3 -n 4 --log-level=pmd.net.xlnx.init,8 --log-level=pmd.net.xlnx.driver,8 --vdev 'net_xlnx0, pbase=0xa0000000- -i
+
+Args:
+	--log-level: set print out information level.
+	pbase: start register's physical address
+
+Please refer to http://doc.dpdk.org/guides/testpmd_app_ug/index.html for more details of testpmd
+
+
+
+
