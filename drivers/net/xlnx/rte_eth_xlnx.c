@@ -188,7 +188,8 @@ eth_xlnx_rx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 	eth_xlnx_rx_mbuf_supplement(rxq, ret_mbuf_num);
 	rdma_flush_ring(rxq);
 
-	rte_atomic64_add(&(rxq->rx_pkts), ret_mbuf_num);
+	//rte_atomic64_add(&(rxq->rx_pkts), ret_mbuf_num);
+	rxq->rx_pkts.cnt += ret_mbuf_num;
 
 	return i;
 }
@@ -273,7 +274,8 @@ eth_xlnx_tx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 
 	eth_xlnx_tx_mbuf_free(txq);
 
-	rte_atomic64_add(&(txq->tx_pkts), send_mbuf_num);
+	//rte_atomic64_add(&(txq->tx_pkts), send_mbuf_num);
+	txq->tx_pkts.cnt += send_mbuf_num;
 	txq->in_use = 1;
 
 	return i;
