@@ -633,6 +633,10 @@ M: Jasvinder Singh <jasvinder.singh@intel.com>
 M: Cristian Dumitrescu <cristian.dumitrescu@intel.com>
 F: drivers/net/softnic/
 
+Xilinx PMD
+M: Alex He <ahe@xilinx.com>
+F: drivers/net/xlnx/
+
 
 Crypto Drivers
 --------------
