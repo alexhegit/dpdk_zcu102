@@ -87,31 +87,30 @@ union rdma_tx_desc {
 /* Tx/Rx queue */
 struct rdma_queue {
 	struct rdma_dev * rdma_dev;
+	uint32_t *hw_producer;
+	uint32_t *hw_consumer;
+	struct rte_mempool * mb_pool;
+	struct rte_mbuf ** mbufs_info;
+	void * ring_vaddr;
+	phys_addr_t ring_paddr;
+	void * ring_vend;
 
 	uint32_t sw_p;
 	uint32_t sw_c;
 	uint32_t hw_p;
 	uint32_t hw_c;
 	uint32_t in_use; /* 0: unused, 1: in use */
-	uint32_t *hw_producer;
-	uint32_t *hw_consumer;
-
 	uint32_t ring_size;
-	struct rte_mbuf ** mbufs_info;
-	void * ring_vaddr;
-	phys_addr_t ring_paddr;
-	void * ring_vend;
+
 	void * status_vaddr;
 	phys_addr_t status_paddr;
-
-	struct rte_mempool * mb_pool;
 
 	rte_atomic64_t rx_pkts;
 	rte_atomic64_t tx_pkts;
 	rte_atomic64_t err_pkts;
 
 	uint32_t configured;
-};
+}__rte_cache_aligned;
 
 #define XLNX_RDMA_PKT_BATCH 1
 #define XLNX_RDMA_PKT_TH_DELAY 32
