@@ -131,11 +131,11 @@ struct rdma_dev {
 	uint32_t irq_threshold; /* Interrupt threshold */
 	uint32_t irq_delay; /* Interrupt delay in us */
 
+	rte_spinlock_t reg_lock;
+
 	struct rdma_queue rx_queues[XLNX_MAX_QUEUE_PER_PORT];
 	struct rdma_queue tx_queues[XLNX_MAX_QUEUE_PER_PORT];
-
-	rte_spinlock_t reg_lock;
-};
+}__rte_cache_aligned;
 
 #define CONFIG_RTE_CACHE_LINE_SIZE 128
 static inline void
