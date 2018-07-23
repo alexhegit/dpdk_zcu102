@@ -67,7 +67,7 @@ Test
 Copy the testpmd to your board, then do test.
 
 e.g.
-$testpmd -l 1-3 -n 4 --log-level=pmd.net.xlnx.init,8 --log-level=pmd.net.xlnx.driver,8 --vdev 'net_xlnx0, pbase=0xa0000000- -i
+$testpmd -l 1-3 -n 4 --log-level=pmd.net.xlnx.init,8 --log-level=pmd.net.xlnx.driver,8 --vdev 'net_xlnx0, pbase=0xa0000000 -- -i
 
 Args:
 	--log-level: set print out information level.
