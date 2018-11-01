@@ -95,7 +95,9 @@ rdma_flush_ring(struct rdma_queue *q)
 	start = (uint64_t)q->ring_vaddr;
 	stop = (uint64_t)q->ring_vend;
 
-	invalidate_dcache_range(start, stop);
+	//invalidate_dcache_range(start, stop);
+	__clear_cache((char *)start, (char *)stop);
+
 }
 
 /*
@@ -114,6 +116,13 @@ count_space(uint32_t tail, uint32_t head, uint32_t ring_size)
 		ret = ring_size - tail + head;
 
 	return ret;
+
+	//if (head > tail)
+		//ret = head - tail;
+	//else
+		//ret = ring_size - tail + head - 1;
+
+	//return ret;
 }
 
 
@@ -136,6 +145,8 @@ eth_xlnx_rx_mbuf_supplement(struct rdma_queue *rxq, uint16_t nb_bufs)
 	}
 
 	RDMA_REG_WR32(rxq->hw_p, rxq->hw_producer);
+	//printf("RXQ: hw_p=%d, hw_c=%d, sw_p=%d, sw_c=%d\n\r",
+	//		rxq->hw_p, rxq->hw_c, rxq->sw_p, rxq->sw_c);
 
 	return nb_bufs;
 }
@@ -154,6 +165,11 @@ eth_xlnx_rx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 	rxq->hw_p = RDMA_REG_RD32(rxq->hw_producer);
 	rxq->hw_c = RDMA_REG_RD32(rxq->hw_consumer);
 
+
+	//printf("+++RXQ: hw_p=%d, hw_c=%d, sw_p=%d, sw_c=%d\n\r",
+	//		rxq->hw_p, rxq->hw_c, rxq->sw_p, rxq->sw_c);
+
+
 	/* empty rx ring */
 	if (rxq->sw_c == rxq->hw_c)
 		return 0;
@@ -166,6 +182,7 @@ eth_xlnx_rx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 		ret_mbuf_num = nb_bufs;
 	else
 		ret_mbuf_num = cur_mbuf_num;
+	//printf("ret_mbuf_num = %d\n\r", ret_mbuf_num);
 
 	for (i = 0; i < ret_mbuf_num; i++)
 	{
@@ -238,6 +255,12 @@ eth_xlnx_tx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 	/* PD ring is full, can not send pkt more */
 	if (unused_pd_num == 0) {
 		xlnx_log_info("PD ring is full\n");
+		printf("TXQ0: hw_p=%d, hw_c=%d, sw_p=%d, sw_c=%d\n\r",
+			txq->hw_p, txq->hw_c, txq->sw_p, txq->sw_c);
+		RDMA_REG_WR32(txq->hw_p, txq->hw_producer);
+		RDMA_REG_WR32(txq->hw_c, txq->hw_consumer);
+		printf("TXQ1: hw_p=%d, hw_c=%d, sw_p=%d, sw_c=%d\n\r",
+			txq->hw_p, txq->hw_c, txq->sw_p, txq->sw_c);
 		eth_xlnx_tx_mbuf_free(txq);
 		return 0;
 	}
@@ -254,15 +277,20 @@ eth_xlnx_tx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 	hw_p = txq->hw_p;
 	for (i = 0; i < send_mbuf_num; i++) {
 		tx_desc = (union rdma_tx_desc *)txq->ring_vaddr + hw_p;
+		//printf("pkt_addr = 0x%lx\n\r", (uint64_t)tx_desc);
 		txq->mbufs_info[hw_p] = bufs[i];
 		tx_desc->read.pkt_addr = rte_mbuf_data_iova(bufs[i]);
+		//printf("pkt_addr = 0x%lx\n\r", tx_desc->read.pkt_addr);
 		tx_desc->read.pkt_size = rte_pktmbuf_data_len(bufs[i]);
-		tx_desc->read.seop.sop = 0x1;
-		tx_desc->read.seop.eop = 0x1;
-		tx_desc->read.rsvd3 = 0x1;
+		//printf("pkt_size = 0x%x\n\r", tx_desc->read.pkt_size);
+		//tx_desc->read.seop.sop = 0x1;
+		//tx_desc->read.seop.eop = 0x1;
+		//tx_desc->read.rsvd3 = 0x1;
 		hw_p = (hw_p + 1) % txq->ring_size;
 	}
 	rdma_flush_ring(txq);
+	//printf("TXQ: hw_p=%d, hw_c=%d, sw_p=%d, sw_c=%d\n\r",
+	//		txq->hw_p, txq->hw_c, txq->sw_p, txq->sw_c);
 	RDMA_REG_WR32(hw_p, txq->hw_producer);
 
 	eth_xlnx_tx_mbuf_free(txq);
@@ -276,12 +304,12 @@ eth_xlnx_tx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 static inline void
 eth_xlnx_reset_rdma(struct rdma_dev *rdma_dev)
 {
-	rdma_reg_write(rdma_dev->regs_vbase, 0xC0, 0x0);
+	rdma_reg_write(rdma_dev->regs_vbase, SG_DATAMOVER_RST, 0x1);
 	usleep(100);
-	rdma_reg_write(rdma_dev->regs_vbase, 0xC0, 0x2);
+	rdma_reg_write(rdma_dev->regs_vbase, SG_DATAMOVER_RST, 0x0);
 	usleep(100);
 }
-
+#if 0
 static __rte_unused int
 eth_xlnx_disable_rx_queue(struct rdma_dev *rdma_dev)
 {
@@ -349,6 +377,7 @@ eth_xlnx_enable_tx_queue(struct rdma_dev *rdma_dev)
 
 	return 0;
 }
+#endif
 
 static int
 eth_dev_configure(struct rte_eth_dev *dev)
@@ -366,32 +395,33 @@ eth_dev_configure(struct rte_eth_dev *dev)
 	rdma_dev->irq_resent = XLNX_RDMA_IRQ_RESENT;
 	rdma_dev->irq_threshold = XLNX_RDMA_IRQ_THRESHOLD;
 	rdma_dev->irq_delay = XLNX_RDMA_IRQ_DELAY;
-
+#if 0
 	eth_xlnx_disable_rx_queue(rdma_dev);
 	eth_xlnx_disable_tx_queue(rdma_dev);
-
+#endif
 	return 0;
 }
 
 static int
 eth_dev_start(struct rte_eth_dev *dev)
 {
-	struct rdma_dev *rdma_dev;
+	//struct rdma_dev *rdma_dev = NULL;
 	xlnx_log_info();
 
 	if (dev == NULL)
 		return -EINVAL;
 
-	rdma_dev = dev->data->dev_private;
-
+	//rdma_dev = dev->data->dev_private;
+#if 0
 	eth_xlnx_enable_tx_queue(rdma_dev);
+#endif
 	/* FIXME:
 	 * Keep same as kernel driver, RX path should be enable later
 	 * Move to do it in rx queue setup
 	 */
 	//eth_xlnx_enable_rx_queue(rdma_dev);
 
-	eth_xlnx_reset_rdma(rdma_dev);
+	//eth_xlnx_reset_rdma(rdma_dev);
 
 	dev->data->dev_link.link_status = ETH_LINK_UP;
 	return 0;
@@ -400,17 +430,19 @@ eth_dev_start(struct rte_eth_dev *dev)
 static void
 eth_dev_stop(struct rte_eth_dev *dev)
 {
+#if 0
 	struct rdma_dev *rdma_dev;
+#endif
 	xlnx_log_info();
 
 	if (dev == NULL)
 		return;
-
+#if 0
 	rdma_dev = dev->data->dev_private;
 
 	eth_xlnx_disable_tx_queue(rdma_dev);
 	eth_xlnx_disable_rx_queue(rdma_dev);
-
+#endif
 	dev->data->dev_link.link_status = ETH_LINK_DOWN;
 }
 
@@ -427,7 +459,7 @@ eth_rx_queue_setup(struct rte_eth_dev *dev, uint16_t rx_queue_id,
 	union rdma_rx_desc *rdesc;
 	uint32_t min_size;
 	int i;
-	int ret;
+	int ret = 0;
 
 	xlnx_log_info();
 
@@ -515,12 +547,29 @@ eth_rx_queue_setup(struct rte_eth_dev *dev, uint16_t rx_queue_id,
 	rxq->sw_c = 0;
 	rxq->hw_p = 0;
 	rxq->hw_c = 0;
-	rxq->hw_producer = (uint32_t *)((uint8_t *)rdma_dev->regs_vbase + RDMA_RXRING_PRODUCER);
-	rxq->hw_consumer = (uint32_t *)((uint8_t *)rdma_dev->regs_vbase + RDMA_RXRING_CONSUMER);
+	//printf("RXQ: hw_p=%d, hw_c=%d, sw_p=%d, sw_c=%d\n\r",
+	//		rxq->hw_p, rxq->hw_c, rxq->sw_p, rxq->sw_c);
+	rxq->hw_producer = (uint32_t *)((uint8_t *)rdma_dev->regs_vbase + SG_DATAMOVER_RXRING_PRODUCER);
+	rxq->hw_consumer = (uint32_t *)((uint8_t *)rdma_dev->regs_vbase + SG_DATAMOVER_RXRING_CONSUMER);
 
 	rte_atomic64_init(&rxq->rx_pkts);
 	rte_atomic64_init(&rxq->err_pkts);
 
+    rdma_reg_write(rdma_dev->regs_vbase, SG_DATAMOVER_XCACHE,
+			0x2);
+    rdma_reg_write(rdma_dev->regs_vbase, SG_DATAMOVER_EOF,
+			0x1);
+    rdma_reg_write(rdma_dev->regs_vbase, SG_DATAMOVER_BURST_TYPE,
+			0x1);
+
+    rdma_reg_write(rdma_dev->regs_vbase, SG_DATAMOVER_RXRING_START_ADDR_H,
+			(rxq->ring_paddr & RDMA_ADDRH_MASK) >> 32);
+    rdma_reg_write(rdma_dev->regs_vbase, SG_DATAMOVER_RXRING_START_ADDR_L,
+			rxq->ring_paddr & RDMA_ADDRL_MASK);
+
+
+
+#if 0
 	rdma_reg_write(rdma_dev->regs_vbase, RDMA_RXRING_START_ADDR_L,
 			rxq->ring_paddr & RDMA_ADDRL_MASK);
 	rdma_reg_write(rdma_dev->regs_vbase, RDMA_RXRING_START_ADDR_H,
@@ -538,9 +587,9 @@ eth_rx_queue_setup(struct rte_eth_dev *dev, uint16_t rx_queue_id,
 			rdma_dev->irq_resent);
 	rdma_reg_write(rdma_dev->regs_vbase, RDMA_RX_INT_THRESHOLD_DELAY,
 			(rdma_dev->irq_threshold << 16) | rdma_dev->irq_delay);
-
-	rdma_reg_write(rdma_dev->regs_vbase, RDMA_RXRING_PRODUCER, 0);
-	rdma_reg_write(rdma_dev->regs_vbase, RDMA_RXRING_CONSUMER, 0);
+#endif
+	rdma_reg_write(rdma_dev->regs_vbase, SG_DATAMOVER_RXRING_PRODUCER, 0);
+	rdma_reg_write(rdma_dev->regs_vbase, SG_DATAMOVER_RXRING_CONSUMER, 0);
 
 	dev->data->rx_queues[rx_queue_id] =
 		&rdma_dev->rx_queues[rx_queue_id];
@@ -550,9 +599,13 @@ eth_rx_queue_setup(struct rte_eth_dev *dev, uint16_t rx_queue_id,
 	 *
 	 * Keep same as kernel driver, enable RX transfer at here
 	 */
+#if 0
 	rdma_reg_write(rdma_dev->regs_vbase, 0xC4, XLNX_MAX_PKT_SIZE);
 	eth_xlnx_enable_rx_queue(rdma_dev);
+#endif
 	rxq->hw_p = rxq->ring_size - 1;
+	//printf("RXQ: hw_p=%d, hw_c=%d, sw_p=%d, sw_c=%d\n\r",
+	//		rxq->hw_p, rxq->hw_c, rxq->sw_p, rxq->sw_c);
 	RDMA_REG_WR32(rxq->hw_p, rxq->hw_producer);
 
 	rxq->configured = 1;
@@ -637,12 +690,21 @@ eth_tx_queue_setup(struct rte_eth_dev *dev, uint16_t tx_queue_id,
 	txq->hw_p = 0;
 	txq->hw_c = 0;
 	txq->in_use = 0;
-	txq->hw_producer = (uint32_t *)((uint8_t *)rdma_dev->regs_vbase + RDMA_TXRING_PRODUCER);
-	txq->hw_consumer = (uint32_t *)((uint8_t *)rdma_dev->regs_vbase + RDMA_TXRING_CONSUMER);
+	txq->hw_producer = (uint32_t *)((uint8_t *)rdma_dev->regs_vbase + SG_DATAMOVER_TXRING_PRODUCER);
+	txq->hw_consumer = (uint32_t *)((uint8_t *)rdma_dev->regs_vbase + SG_DATAMOVER_TXRING_CONSUMER);
+	//printf("TXQ: hw_p=%d, hw_c=%d, sw_p=%d, sw_c=%d\n\r",
+	//		txq->hw_p, txq->hw_c, txq->sw_p, txq->sw_c);
 
 	rte_atomic64_init(&txq->tx_pkts);
 	rte_atomic64_init(&txq->err_pkts);
 
+	rdma_reg_write(rdma_dev->regs_vbase, SG_DATAMOVER_TXRING_START_ADDR_H,
+			(txq->ring_paddr & RDMA_ADDRH_MASK) >> 32);
+	rdma_reg_write(rdma_dev->regs_vbase, SG_DATAMOVER_TXRING_START_ADDR_L,
+			txq->ring_paddr & RDMA_ADDRL_MASK);
+
+
+#if 0
 	rdma_reg_write(rdma_dev->regs_vbase, RDMA_TXRING_START_ADDR_L,
 			txq->ring_paddr & RDMA_ADDRL_MASK);
 	rdma_reg_write(rdma_dev->regs_vbase, RDMA_TXRING_START_ADDR_H,
@@ -660,9 +722,9 @@ eth_tx_queue_setup(struct rte_eth_dev *dev, uint16_t tx_queue_id,
 			rdma_dev->irq_resent);
 	rdma_reg_write(rdma_dev->regs_vbase, RDMA_TX_INT_THRESHOLD_DELAY,
 			(rdma_dev->irq_threshold << 16) | rdma_dev->irq_delay);
-
-	rdma_reg_write(rdma_dev->regs_vbase, RDMA_TXRING_PRODUCER, 0);
-	rdma_reg_write(rdma_dev->regs_vbase, RDMA_TXRING_CONSUMER, 0);
+#endif
+	rdma_reg_write(rdma_dev->regs_vbase, SG_DATAMOVER_TXRING_PRODUCER, 0);
+	rdma_reg_write(rdma_dev->regs_vbase, SG_DATAMOVER_TXRING_CONSUMER, 0);
 
 	dev->data->tx_queues[tx_queue_id] =
 		&rdma_dev->tx_queues[tx_queue_id];
@@ -1005,6 +1067,7 @@ rte_pmd_xlnx_probe(struct rte_vdev_device *dev)
 				goto free_kvlist;
 		}
 	}
+	regs_pbase = 0xa0000000; //Jason
 
 	RTE_LOG(INFO, PMD, "Configure pmd_xlnx, regs_pbase=%lu\n", regs_pbase);
 

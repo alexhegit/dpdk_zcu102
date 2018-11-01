@@ -13,6 +13,7 @@
 struct rdma_dev;
 
 /* Receive Descriptor */
+#if 0
 union rdma_rx_desc {
 	struct {
 		uint32_t pkt_rsvd; /* rsvd */
@@ -25,7 +26,25 @@ union rdma_rx_desc {
 		uint64_t rsvd1;
 	} wb;
 };
+#endif
+union rdma_rx_desc {
+	struct {
+        uint64_t pkt_addr;
+        uint32_t pkt_size;
+        uint32_t rsv0;
+        uint64_t rsv1;
+        uint64_t rsv3;
+    } read;
+	struct {
+        uint64_t pkt_addr;
+        uint32_t pkt_size;
+        uint32_t rsv0;
+        uint64_t rsv1;
+        uint64_t rsv3;
+    } wb;
+};
 
+#if 0
 /* Transmit Descriptor */
 union rdma_tx_desc {
 	struct {
@@ -48,7 +67,23 @@ union rdma_tx_desc {
 		uint64_t rsvd3;
 	} wb;
 };
-
+#endif
+union rdma_tx_desc {
+	struct {
+        uint64_t pkt_addr;
+        uint32_t pkt_size;
+        uint32_t rsv0;
+        uint64_t rsv1;
+        uint64_t rsv3;
+    } read;
+	struct {
+        uint64_t pkt_addr;
+        uint32_t pkt_size;
+        uint32_t rsv0;
+        uint64_t rsv1;
+        uint64_t rsv3;
+    } wb;
+};
 /* Tx/Rx queue */
 struct rdma_queue {
 	struct rdma_dev * rdma_dev;
