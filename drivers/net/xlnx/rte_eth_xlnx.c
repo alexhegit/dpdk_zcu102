@@ -247,7 +247,8 @@ eth_xlnx_tx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 		printf("TXQ1: hw_p=%d, hw_c=%d, sw_p=%d, sw_c=%d\n\r",
 			txq->hw_p, txq->hw_c, txq->sw_p, txq->sw_c);
 		eth_xlnx_tx_mbuf_free(txq);
-		return 0;
+		//return 0;
+		unused_pd_num = count_space(txq->hw_p, txq->sw_c, txq->ring_size);
 	}
 
 	if (unused_pd_num < nb_bufs)
