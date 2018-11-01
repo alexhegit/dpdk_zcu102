@@ -209,7 +209,7 @@ eth_xlnx_tx_mbuf_free(struct rdma_queue *txq)
 
 	nb_bufs = count_space(txq->sw_c, txq->hw_c, txq->ring_size);
 
-	for(i = 0; i < nb_bufs; i++)
+	for(i = 0; i < nb_bufs - 32; i++)
 	{
 		rte_pktmbuf_free(bufs[txq->sw_c]);
 		txq->sw_c = (txq->sw_c + 1) % txq->ring_size;
