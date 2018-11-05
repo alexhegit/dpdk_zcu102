@@ -116,13 +116,6 @@ count_space(uint32_t tail, uint32_t head, uint32_t ring_size)
 		ret = ring_size - tail + head;
 
 	return ret;
-
-	//if (head > tail)
-		//ret = head - tail;
-	//else
-		//ret = ring_size - tail + head - 1;
-
-	//return ret;
 }
 
 
@@ -145,8 +138,6 @@ eth_xlnx_rx_mbuf_supplement(struct rdma_queue *rxq, uint16_t nb_bufs)
 	}
 
 	RDMA_REG_WR32(rxq->hw_p, rxq->hw_producer);
-	//printf("RXQ: hw_p=%d, hw_c=%d, sw_p=%d, sw_c=%d\n\r",
-	//		rxq->hw_p, rxq->hw_c, rxq->sw_p, rxq->sw_c);
 
 	return nb_bufs;
 }
@@ -165,11 +156,6 @@ eth_xlnx_rx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 	rxq->hw_p = RDMA_REG_RD32(rxq->hw_producer);
 	rxq->hw_c = RDMA_REG_RD32(rxq->hw_consumer);
 
-
-	//printf("+++RXQ: hw_p=%d, hw_c=%d, sw_p=%d, sw_c=%d\n\r",
-	//		rxq->hw_p, rxq->hw_c, rxq->sw_p, rxq->sw_c);
-
-
 	/* empty rx ring */
 	if (rxq->sw_c == rxq->hw_c)
 		return 0;
@@ -182,7 +168,6 @@ eth_xlnx_rx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 		ret_mbuf_num = nb_bufs;
 	else
 		ret_mbuf_num = cur_mbuf_num;
-	//printf("ret_mbuf_num = %d\n\r", ret_mbuf_num);
 
 	for (i = 0; i < ret_mbuf_num; i++)
 	{
@@ -277,20 +262,12 @@ eth_xlnx_tx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 	hw_p = txq->hw_p;
 	for (i = 0; i < send_mbuf_num; i++) {
 		tx_desc = (union rdma_tx_desc *)txq->ring_vaddr + hw_p;
-		//printf("pkt_addr = 0x%lx\n\r", (uint64_t)tx_desc);
 		txq->mbufs_info[hw_p] = bufs[i];
 		tx_desc->read.pkt_addr = rte_mbuf_data_iova(bufs[i]);
-		//printf("pkt_addr = 0x%lx\n\r", tx_desc->read.pkt_addr);
 		tx_desc->read.pkt_size = rte_pktmbuf_data_len(bufs[i]);
-		//printf("pkt_size = 0x%x\n\r", tx_desc->read.pkt_size);
-		//tx_desc->read.seop.sop = 0x1;
-		//tx_desc->read.seop.eop = 0x1;
-		//tx_desc->read.rsvd3 = 0x1;
 		hw_p = (hw_p + 1) % txq->ring_size;
 	}
 	rdma_flush_ring(txq);
-	//printf("TXQ: hw_p=%d, hw_c=%d, sw_p=%d, sw_c=%d\n\r",
-	//		txq->hw_p, txq->hw_c, txq->sw_p, txq->sw_c);
 	RDMA_REG_WR32(hw_p, txq->hw_producer);
 
 	eth_xlnx_tx_mbuf_free(txq);
@@ -547,24 +524,21 @@ eth_rx_queue_setup(struct rte_eth_dev *dev, uint16_t rx_queue_id,
 	rxq->sw_c = 0;
 	rxq->hw_p = 0;
 	rxq->hw_c = 0;
-	//printf("RXQ: hw_p=%d, hw_c=%d, sw_p=%d, sw_c=%d\n\r",
-	//		rxq->hw_p, rxq->hw_c, rxq->sw_p, rxq->sw_c);
 	rxq->hw_producer = (uint32_t *)((uint8_t *)rdma_dev->regs_vbase + SG_DATAMOVER_RXRING_PRODUCER);
 	rxq->hw_consumer = (uint32_t *)((uint8_t *)rdma_dev->regs_vbase + SG_DATAMOVER_RXRING_CONSUMER);
 
 	rte_atomic64_init(&rxq->rx_pkts);
 	rte_atomic64_init(&rxq->err_pkts);
 
-    rdma_reg_write(rdma_dev->regs_vbase, SG_DATAMOVER_XCACHE,
-			0x2);
-    rdma_reg_write(rdma_dev->regs_vbase, SG_DATAMOVER_EOF,
-			0x1);
-    rdma_reg_write(rdma_dev->regs_vbase, SG_DATAMOVER_BURST_TYPE,
-			0x1);
-
-    rdma_reg_write(rdma_dev->regs_vbase, SG_DATAMOVER_RXRING_START_ADDR_H,
-			(rxq->ring_paddr & RDMA_ADDRH_MASK) >> 32);
-    rdma_reg_write(rdma_dev->regs_vbase, SG_DATAMOVER_RXRING_START_ADDR_L,
+	rdma_reg_write(rdma_dev->regs_vbase, SG_DATAMOVER_XCACHE,
+	    		0x2);
+	rdma_reg_write(rdma_dev->regs_vbase, SG_DATAMOVER_EOF,
+	    		0x1);
+	rdma_reg_write(rdma_dev->regs_vbase, SG_DATAMOVER_BURST_TYPE,
+	    		0x1);
+	rdma_reg_write(rdma_dev->regs_vbase, SG_DATAMOVER_RXRING_START_ADDR_H,
+	    		(rxq->ring_paddr & RDMA_ADDRH_MASK) >> 32);
+	rdma_reg_write(rdma_dev->regs_vbase, SG_DATAMOVER_RXRING_START_ADDR_L,
 			rxq->ring_paddr & RDMA_ADDRL_MASK);
 
 
@@ -604,8 +578,6 @@ eth_rx_queue_setup(struct rte_eth_dev *dev, uint16_t rx_queue_id,
 	eth_xlnx_enable_rx_queue(rdma_dev);
 #endif
 	rxq->hw_p = rxq->ring_size - 1;
-	//printf("RXQ: hw_p=%d, hw_c=%d, sw_p=%d, sw_c=%d\n\r",
-	//		rxq->hw_p, rxq->hw_c, rxq->sw_p, rxq->sw_c);
 	RDMA_REG_WR32(rxq->hw_p, rxq->hw_producer);
 
 	rxq->configured = 1;
@@ -692,8 +664,6 @@ eth_tx_queue_setup(struct rte_eth_dev *dev, uint16_t tx_queue_id,
 	txq->in_use = 0;
 	txq->hw_producer = (uint32_t *)((uint8_t *)rdma_dev->regs_vbase + SG_DATAMOVER_TXRING_PRODUCER);
 	txq->hw_consumer = (uint32_t *)((uint8_t *)rdma_dev->regs_vbase + SG_DATAMOVER_TXRING_CONSUMER);
-	//printf("TXQ: hw_p=%d, hw_c=%d, sw_p=%d, sw_c=%d\n\r",
-	//		txq->hw_p, txq->hw_c, txq->sw_p, txq->sw_c);
 
 	rte_atomic64_init(&txq->tx_pkts);
 	rte_atomic64_init(&txq->err_pkts);
