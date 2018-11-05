@@ -133,8 +133,8 @@ eth_xlnx_rx_mbuf_supplement(struct rdma_queue *rxq, uint16_t nb_bufs)
 		rdesc = (union rdma_rx_desc *)rxq->ring_vaddr + rxq->sw_p;
 		rdesc->read.pkt_addr = bufs[rxq->sw_p]->buf_iova;
 		rdesc->read.pkt_size = XLNX_MAX_PKT_SIZE;
-		rxq->sw_p = (rxq->sw_p + 1) % rxq->ring_size;
-		rxq->hw_p = (rxq->hw_p + 1) % rxq->ring_size;
+		rxq->sw_p = (rxq->sw_p + 1) & (rxq->ring_size - 1);
+		rxq->hw_p = (rxq->hw_p + 1) & (rxq->ring_size - 1);
 	}
 
 	RDMA_REG_WR32(rxq->hw_p, rxq->hw_producer);
@@ -179,10 +179,8 @@ eth_xlnx_rx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 		bufs[i]->data_len = XLNX_MAX_PKT_SIZE;
 		bufs[i]->pkt_len = XLNX_MAX_PKT_SIZE;
 		bufs[i]->port = rxq->rdma_dev->port_id;
-		rxq->sw_c++;
-		/* ring back from end to start */
-		if (rxq->sw_c == rxq->ring_size)
-			rxq->sw_c = 0;
+		/* Will ring back from end to start */
+		rxq->sw_c = (rxq->sw_c + 1) & (rxq->ring_size - 1);
 	}
 
 	eth_xlnx_rx_mbuf_supplement(rxq, ret_mbuf_num);
@@ -213,7 +211,7 @@ eth_xlnx_tx_mbuf_free(struct rdma_queue *txq)
 	for(i = 0; i < nb_bufs - 32; i++)
 	{
 		rte_pktmbuf_free(bufs[txq->sw_c]);
-		txq->sw_c = (txq->sw_c + 1) % txq->ring_size;
+		txq->sw_c = (txq->sw_c + 1) & (txq->ring_size - 1);
 	}
 }
 
@@ -267,7 +265,7 @@ eth_xlnx_tx(void *q, struct rte_mbuf **bufs, uint16_t nb_bufs)
 		txq->mbufs_info[hw_p] = bufs[i];
 		tx_desc->read.pkt_addr = rte_mbuf_data_iova(bufs[i]);
 		tx_desc->read.pkt_size = rte_pktmbuf_data_len(bufs[i]);
-		hw_p = (hw_p + 1) % txq->ring_size;
+		hw_p = (hw_p + 1) & (txq->ring_size - 1);
 	}
 	rdma_flush_ring(txq);
 	RDMA_REG_WR32(hw_p, txq->hw_producer);
@@ -448,12 +446,7 @@ eth_rx_queue_setup(struct rte_eth_dev *dev, uint16_t rx_queue_id,
 	if (rx_queue_id >= dev->data->nb_rx_queues)
 		return -ENODEV;
 
-	if (!rte_is_power_of_2(nb_rx_desc)) {
-		RTE_LOG(ERR, PMD,
-			"Unsupported size of RX queue: %d not a power of 2\n",
-			nb_rx_desc);
-		return -EINVAL;
-	}
+	nb_rx_desc = rte_align32pow2(nb_rx_desc);
 
 	if (nb_rx_desc > XLNX_MAX_RING_SIZE) {
 		RTE_LOG(ERR, PMD,
@@ -610,12 +603,7 @@ eth_tx_queue_setup(struct rte_eth_dev *dev, uint16_t tx_queue_id,
 	if (dev == NULL)
 		return -EINVAL;
 
-	if (!rte_is_power_of_2(nb_tx_desc)) {
-		RTE_LOG(ERR, PMD,
-			"Unsupported size of TX queue: %d not a power of 2\n",
-			nb_tx_desc);
-		return -EINVAL;
-	}
+	nb_tx_desc = rte_align32pow2(nb_tx_desc);
 
 	if (nb_tx_desc > XLNX_MAX_RING_SIZE) {
 		RTE_LOG(ERR, PMD,
