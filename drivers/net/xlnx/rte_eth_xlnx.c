@@ -408,19 +408,18 @@ eth_dev_start(struct rte_eth_dev *dev)
 static void
 eth_dev_stop(struct rte_eth_dev *dev)
 {
-#if 0
 	struct rdma_dev *rdma_dev;
-#endif
 	xlnx_log_info();
 
 	if (dev == NULL)
 		return;
-#if 0
 	rdma_dev = dev->data->dev_private;
+#if 0
 
 	eth_xlnx_disable_tx_queue(rdma_dev);
 	eth_xlnx_disable_rx_queue(rdma_dev);
 #endif
+	eth_xlnx_reset_rdma(rdma_dev);
 	dev->data->dev_link.link_status = ETH_LINK_DOWN;
 }
 
