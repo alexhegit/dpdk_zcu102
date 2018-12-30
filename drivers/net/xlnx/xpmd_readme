@@ -69,11 +69,32 @@ Copy the testpmd to your board, then do test.
 e.g.
 $testpmd -l 1-3 -n 4 --log-level=pmd.net.xlnx.init,8 --log-level=pmd.net.xlnx.driver,8 --vdev 'net_xlnx0, pbase=0xa0000000 -- -i
 
-Args:
+Options:
 	--log-level: set print out information level.
 	pbase: start register's physical address
 
 Please refer to http://doc.dpdk.org/guides/testpmd_app_ug/index.html for more details of testpmd
+
+
+Show PPS when do testpmd
+
+Testpmd> show port stats all
+
+For testpmd , Details on Packet size Parameters 
+ 
+Options:
+--max-pkt-len=N 
+Set the maximum packet size to N bytes, where N >= 64. The default value is 1518.
+
+# testpmd -l 1-3 -n 4 --log-level=pmd.net.xlnx.init,8 --log-level=pmd.net.xlnx.driver,8 --vdev net_xlnx0,pbase=0xa0000000 -- -i --max-pkt-len=64 
+
+Options:
+--forward-mode=mode
+ Set the forwarding mode where mode is one of the following:
+ io (the default) mac mac_swap flowgen rxonly txonly csum icmpecho ieee1588 
+
+--burst=N 
+Set the number of packets per burst to N, where 1 <= N <= 512. The default value is 16. 
 
 
 
